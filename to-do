@@ -1,0 +1,28 @@
+✅ estrutura do projeto
+✅ server funcionando
+✅ organização de pastas/estrutura de pastas
+(dados obrigaórios: id, name, email, password)
+✅ centralizar regras de auth
+✅ rotas + conectar routes no app.js
+✅ middleware de autenticação
+✅ verificar se o middleware está funcionando
+✅ criar uma rota protegida simples 
+✅ entender o fluxo completo do token
+✅ testar o fluxo inteiro 
+✅ testes automatizados com Jest + Supertest
+    - instalar ferramenta de teste
+    - configurar o Jest
+    - escrever um teste de register
+    - escrever um teste de login
+    - escrever um teste de rota protegida
+✅ API responde corretamente
+✅ o fluxo register -> login -> token -> rota protegida está funcionando perfeitamente
+✅ middleware está correto
+✅ o contrato da API está estável
+
+EVOLUIR FUTURAMENTE:
+- service layer
+- banco dados
+- refresh token
+- roles
+- Typescript
