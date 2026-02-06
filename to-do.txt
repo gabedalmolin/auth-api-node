@@ -19,10 +19,21 @@
 ✅ o fluxo register -> login -> token -> rota protegida está funcionando perfeitamente
 ✅ middleware está correto
 ✅ o contrato da API está estável
+✅ mover lógica para o Service
+✅ atualizar o controller
+✅ preparar logout
+✅ teste unitários
+() implementar/migrar para banco de dados
+() decidir entre PostgreSQL com Prisma ou MongoDB com Mongoose
+
+
+
+
+
 
 EVOLUIR FUTURAMENTE:
-- service layer
+✅ service layer
+✅ refresh token
 - banco dados
-- refresh token
 - roles
 - Typescript
