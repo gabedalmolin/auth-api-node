@@ -2,7 +2,7 @@
 
 API de autenticação JWT com refresh tokens persistidos em Postgres, cobertura de testes e separação clara de camadas.
 
-## Stack 
+## Stack
 
 - Node.js 18+, Express 5
 - Prisma 7 + PostgreSQL
@@ -97,8 +97,9 @@ curl http://localhost:3000/users/me \
 - `docker-compose` expõe Postgres em `localhost:5432`, compatível com as URLs de `.env` e `.env.test`.
 
 ## Próximos passos
-- Implementar `jti` + rotação e revogação de refresh tokens no Prisma.
-- Validar payloads com Zod/Joi e unificar respostas de erro.
-- Adicionar logs estruturados (pino) e correlation id via middleware.
-- Configurar CI (GitHub Actions) com docker-compose, testes e lint.
-- Cobrir services com testes unitários para cenários de erro e borda.
+
+- [X] Implementar `jti` + rotação e revogação de refresh tokens no Prisma.
+- [X] Validar payloads com Zod/Joi e unificar respostas de erro.
+- [ ] Adicionar logs estruturados (pino) e correlation id via middleware.
+- [ ] Configurar CI (GitHub Actions) com docker-compose, testes e lint.
+- [ ] Cobrir services com testes unitários para cenários de erro e borda.

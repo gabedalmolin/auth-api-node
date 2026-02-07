@@ -21,7 +21,8 @@
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.18.0",
-    "prisma": "^7.3.0"
+    "prisma": "^7.3.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "jest": "^30.2.0",
