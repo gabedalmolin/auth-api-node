@@ -10,11 +10,11 @@
 ✅ entender o fluxo completo do token
 ✅ testar o fluxo inteiro 
 ✅ testes automatizados com Jest + Supertest
-    - instalar ferramenta de teste
-    - configurar o Jest
-    - escrever um teste de register
-    - escrever um teste de login
-    - escrever um teste de rota protegida
+    -> instalar ferramenta de teste
+    -> configurar o Jest
+    -> escrever um teste de register
+    -> escrever um teste de login
+    -> escrever um teste de rota protegida
 ✅ API responde corretamente
 ✅ o fluxo register -> login -> token -> rota protegida está funcionando perfeitamente
 ✅ middleware está correto
@@ -23,17 +23,50 @@
 ✅ atualizar o controller
 ✅ preparar logout
 ✅ teste unitários
-() implementar/migrar para banco de dados
-() decidir entre PostgreSQL com Prisma ou MongoDB com Mongoose
-
-
-
-
-
 
 EVOLUIR FUTURAMENTE:
 ✅ service layer
 ✅ refresh token
-- banco dados
+✅ banco dados
 - roles
 - Typescript
+
+Migrando pra DB
+1. não quebrar o que já funciona ✅
+2. isolar persistência (repository pattern) ✅
+3. versionar schema ✅
+4. nunca acoplar ORM direto no controller ✅
+5. preparar para ambiente real (prod/dev/test) ✅
+
+modelar ----> migrar
+
+sab 7 fev 09:34
+(prisma pequena mudança)
+    -> separa modelagem de infra
+    -> permite trocar banco sem tocar no schema
+    -> facilita CI/CD
+    -> prepara o projeto para Prisma Accelerate / Edge
+
+processo de migração:
+✅ criar uma camada de acesso a dados (repository)
+✅ manter os testes funcionando
+✅ preparar terreno pra:
+    -> cache
+    -> troca de banco
+    -> mocks
+    -> testes de integração no futuro
+✅ banco PostgreSQL rodando
+✅ prisma + migration ok
+✅ testes ok
+✅ conectar o authService ao banco sem mexer nos controllers
+e sem quebrar testes
+✅ parar de usar throw new Error("...")
+✅ criar erros de domínio
+✅ mapear erros -> status HTTP corretamente
+✅ deixar o service agnóstico de HTTP
+✅ controllers mais limpos
+✅ testes mais previsíveis
+✅ API testada de ponta a ponta
+✅ segurança validada isoladamente
+✅ regras de persistência protegidas
+✅ arquitetura clara (testes)

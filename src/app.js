@@ -10,4 +10,7 @@ app.use("/auth", authRoutes);
 const userRoutes = require("./routes/userRoutes");
 app.use("/users", userRoutes);
 
+const errorHandler = require("./middlewares/errorHandler");
+app.use(errorHandler);
+
 module.exports = app;

@@ -1,90 +1,128 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const authConfig = require("../config/auth");
+const userRepository = require("../repositories/userRepository");
+const refreshTokenRepository = require("../repositories/refreshTokenRepository");
+const AppError = require("../errors/AppError");
 
-// temporariamente armazenando usuários em memória
-let users = []; // vai virar DB depois
-let refreshTokens = []; // lista de refresh tokens válidos
+const HASH_ROUNDS = 8;
+const ACCESS_TOKEN_EXPIRES_IN = authConfig.jwt.expiresIn;
+const REFRESH_TOKEN_EXPIRES_IN = "7d";
 
-class authService {
-  // registrar usuario
+// Normalização evita duplicidade por caixa (John@test.com vs john@test.com)
+const normalizeEmail = (email) => email.trim().toLowerCase();
+
+class AuthService {
+  /**
+   * Registro de usuário
+   * - Email normalizado
+   * - Senha sempre hasheada
+   * - Nunca retorna senha
+   */
   async register({ name, email, password }) {
-    const normalizedEmail = email.toLowerCase();
-    const userExists = users.find((u) => u.email === normalizedEmail);
-    if (userExists) {
-      throw new Error("user already exists");
+    const normalizedEmail = normalizeEmail(email);
+
+    const existingUser = await userRepository.findByEmail(normalizedEmail);
+    if (existingUser) {
+      throw new AppError("user already exists", 409, "USER_ALREADY_EXISTS");
     }
 
-    const hashedPassword = await bcrypt.hash(password, 8);
+    const hashedPassword = await bcrypt.hash(password, HASH_ROUNDS);
 
-    const user = {
-      id: users.length + 1,
+    const user = await userRepository.create({
       name,
       email: normalizedEmail,
       password: hashedPassword,
-    };
+    });
 
-    users.push(user);
-
-    // retorna sem senha
     const { password: _, ...rest } = user;
     return rest;
   }
 
-  // login de usuario
+  /**
+   * Login
+   * - Valida credenciais
+   * - Gera access token + refresh token
+   * - Persiste refresh token no banco
+   */
   async login({ email, password }) {
-    const normalizedEmail = email.toLowerCase();
-    const user = users.find((u) => u.email === normalizedEmail);
+    const normalizedEmail = normalizeEmail(email);
+
+    const user = await userRepository.findByEmail(normalizedEmail);
     if (!user) {
-      throw new Error("user not found");
+      throw new AppError("user not found", 401, "INVALID_CREDENTIALS");
     }
 
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
-      throw new Error("invalid password");
+      throw new AppError("invalid password", 401, "INVALID_CREDENTIALS");
     }
 
     const token = jwt.sign({ id: user.id }, authConfig.jwt.secret, {
-      expiresIn: authConfig.jwt.expiresIn,
+      expiresIn: ACCESS_TOKEN_EXPIRES_IN,
     });
 
     const refreshToken = jwt.sign({ id: user.id }, authConfig.jwt.secret, {
-      expiresIn: "7d", // duração longa
+      expiresIn: REFRESH_TOKEN_EXPIRES_IN,
     });
 
-    // armazenar na lista temporária
-    refreshTokens.push(refreshToken);
+    // Salva refresh token (regra crítica para os testes)
+    await refreshTokenRepository.create({
+      token: refreshToken,
+      userId: user.id,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    });
 
     return { token, refreshToken };
   }
 
-  // refresh token
-  async refreshToken(refreshToken) {
-    if (!refreshToken || !refreshTokens.includes(refreshToken)) {
-      throw new Error("invalid refresh token");
+  /**
+   * Refresh token
+   * - Token precisa existir no banco
+   * - Token precisa ser válido
+   * - Token expirado é inválido
+   */
+  async refreshToken(token) {
+    if (!token) {
+      throw new AppError("invalid refresh token", 400, "INVALID_REFRESH_TOKEN");
     }
 
-    let decoded;
+    const storedToken = await refreshTokenRepository.findByToken(token);
+    if (!storedToken) {
+      throw new AppError("invalid refresh token", 401, "INVALID_REFRESH_TOKEN");
+    }
+
     try {
-      decoded = jwt.verify(refreshToken, authConfig.jwt.secret);
-    } catch (err) {
-      throw new Error("invalid refresh token");
+      const decoded = jwt.verify(token, authConfig.jwt.secret);
+
+      return jwt.sign({ id: decoded.id }, authConfig.jwt.secret, {
+        expiresIn: ACCESS_TOKEN_EXPIRES_IN,
+      });
+    } catch {
+      throw new AppError("invalid refresh token", 401, "INVALID_REFRESH_TOKEN");
     }
-
-    const newToken = jwt.sign({ id: decoded.id }, authConfig.jwt.secret, {
-      expiresIn: authConfig.jwt.expiresIn,
-    });
-
-    return newToken;
   }
 
-  logout(refreshToken) {
-    if (!refreshToken || !refreshTokens.includes(refreshToken)) {
-      throw new Error("invalid refresh token");
+  /**
+   * Logout
+   * - Invalida refresh token
+   * - Token inexistente ou já invalidado → erro
+   */
+  async logout(token) {
+    if (!token) {
+      throw new AppError("invalid refresh token", 400, "INVALID_REFRESH_TOKEN");
     }
 
-    refreshTokens = refreshTokens.filter((token) => token !== refreshToken);
+    const storedToken = await refreshTokenRepository.findByToken(token);
+
+    // Se o token nunca existiu → erro
+    if (!storedToken) {
+      throw new AppError("invalid refresh token", 401, "INVALID_REFRESH_TOKEN");
+    }
+
+    // Se existiu, pode deletar (mesmo que já esteja inválido depois)
+    await refreshTokenRepository.delete(token);
   }
 }
 
-module.exports = new authService();
+module.exports = new AuthService();
