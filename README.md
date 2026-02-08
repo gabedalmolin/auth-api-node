@@ -17,7 +17,9 @@ API de autenticação JWT com refresh tokens persistidos em Postgres, cobertura 
 - Camadas explícitas: rotas → controllers → services → repositories.
 - Error handling centralizado com `AppError`.
 - Rate limiting nas rotas de auth.
-- Testes end-to-end cobrindo registro, login, refresh, logout e rotas protegidas.
+- Logs estruturados com correlation id por requisição.
+- Testes em múltiplas camadas: e2e, middleware, repository e service.
+- CI no GitHub Actions com PostgreSQL real e execução de testes.
 - Docker Compose para provisionar Postgres de desenvolvimento/teste.
 
 ## Decisões de arquitetura
@@ -103,7 +105,13 @@ curl http://localhost:3000/users/me \
 ## Próximos passos
 
 - [X] Implementar `jti` + rotação e revogação de refresh tokens no Prisma.
-- [X] Validar payloads com Zod/Joi e unificar respostas de erro.
+- [X] Validar payloads com Zod e unificar respostas de erro.
 - [X] Adicionar logs estruturados (pino) e correlation id via middleware.
-- [ ] Configurar CI (GitHub Actions) com docker-compose, testes e lint.
-- [ ] Cobrir services com testes unitários para cenários de erro e borda.
+- [X] Configurar CI (GitHub Actions) com PostgreSQL e testes.
+- [X] Cobrir `AuthService` com testes unitários para cenários de erro e borda.
+- [ ] Adicionar lint e format (`eslint` + `prettier`) com checagem na CI.
+- [ ] Criar endpoints `/health` e `/ready` com verificação de banco.
+- [ ] Publicar documentação OpenAPI/Swagger dos endpoints.
+- [ ] Persistir refresh token com hash no banco (evitar token em texto puro).
+- [ ] Migrar rate limit para store distribuído (Redis) visando escala horizontal.
+- [ ] Definir meta de cobertura na CI (ex.: `--coverage` com mínimo de 80%).
