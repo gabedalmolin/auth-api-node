@@ -13,13 +13,14 @@ const {
   refreshSchema,
   logoutSchema,
 } = require("../validators/authSchemas");
+const rateLimiter = require("../middlewares/rateLimiter");
 
 const router = express.Router();
 
-router.post("/register", validate(registerSchema), register);
-router.post("/login", validate(loginSchema), login);
-router.post("/refresh", validate(refreshSchema), refresh);
-router.post("/logout", validate(logoutSchema), logout);
+router.post("/register", rateLimiter, validate(registerSchema), register);
+router.post("/login", rateLimiter, validate(loginSchema), login);
+router.post("/refresh", rateLimiter, validate(refreshSchema), refresh);
+router.post("/logout", rateLimiter, validate(logoutSchema), logout);
 
 router.get("/profile", authMiddleware, (req, res) => {
   req.log.info({ userId: req.userId }, "profile fetched");
