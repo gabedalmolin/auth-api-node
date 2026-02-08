@@ -21,6 +21,7 @@ API de autenticação JWT com refresh tokens persistidos em Postgres, cobertura 
 - Testes em múltiplas camadas: e2e, middleware, repository e service.
 - CI no GitHub Actions com PostgreSQL real e execução de testes.
 - Docker Compose para provisionar Postgres de desenvolvimento/teste.
+- Documentação OpenAPI com Swagger UI (`/docs`) e spec JSON (`/docs.json`).
 
 ## Decisões de arquitetura
 
@@ -70,6 +71,10 @@ O `pretest` roda `prisma migrate reset --force && prisma generate`, então o ban
 - POST `/auth/logout`
 - GET `/auth/profile` (protegida)
 - GET `/users/me` (protegida)
+- GET `/health` (liveness)
+- GET `/ready` (readiness com checagem de banco)
+- GET `/docs` (Swagger UI)
+- GET `/docs.json` (OpenAPI spec)
 
 ## Exemplos de uso
 
@@ -111,7 +116,7 @@ curl http://localhost:3000/users/me \
 - [X] Cobrir `AuthService` com testes unitários para cenários de erro e borda.
 - [X] Adicionar lint e format (`eslint` + `prettier`) com checagem na CI.
 - [X] Criar endpoints `/health` e `/ready` com verificação de banco.
-- [ ] Publicar documentação OpenAPI/Swagger dos endpoints.
+- [X] Publicar documentação OpenAPI/Swagger dos endpoints.
 - [ ] Persistir refresh token com hash no banco (evitar token em texto puro).
 - [ ] Migrar rate limit para store distribuído (Redis) visando escala horizontal.
 - [ ] Definir meta de cobertura na CI (ex.: `--coverage` com mínimo de 80%).
