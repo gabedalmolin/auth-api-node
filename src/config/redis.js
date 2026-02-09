@@ -18,4 +18,14 @@ if (redisEnabled) {
   });
 }
 
-module.exports = { redisClient, redisEnabled };
+async function closeRedisConnection() {
+  if (!redisClient) return;
+  if (redisClient.status === "end") return;
+  await redisClient.quit();
+}
+
+module.exports = {
+  redisClient,
+  redisEnabled,
+  closeRedisConnection,
+};

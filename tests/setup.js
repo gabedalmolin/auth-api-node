@@ -1,4 +1,5 @@
 const prisma = require("../src/config/prisma");
+const { closeRedisConnection } = require("../src/config/redis");
 
 beforeEach(async () => {
   await prisma.refreshToken.deleteMany();
@@ -6,5 +7,6 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
+  await closeRedisConnection();
   await prisma.$disconnect();
 });
