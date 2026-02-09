@@ -1,5 +1,3 @@
-const AppError = require("../../src/errors/AppError");
-
 const mockReq = (ip = "127.0.0.1") => ({ ip });
 const mockRes = () => ({});
 const mockNext = () => jest.fn();
