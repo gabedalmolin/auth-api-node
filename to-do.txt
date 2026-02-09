@@ -1,40 +1,12 @@
-# Auth API - Technical Roadmap
-
-## Done
-
-- [x] Layered architecture (routes -> controllers -> services -> repositories).
-- [x] JWT auth flow with access token + refresh token.
-- [x] Refresh token rotation with unique jti.
-- [x] Refresh token revocation (logout).
-- [x] Refresh token hash-at-rest (tokenHash) persisted in database.
-- [x] JWT_SECRET fail-fast validation at startup.
-- [x] Zod payload validation for auth routes.
-- [x] Centralized error handling with AppError pattern.
-- [x] Structured logging with correlation id.
-- [x] Health/readiness endpoints.
-- [x] Swagger/OpenAPI docs endpoint.
-- [x] Redis-backed rate limiting with safe in-memory fallback.
-- [x] Session management endpoints:
-- [x] GET /auth/sessions
-- [x] POST /auth/logout-session
-- [x] POST /auth/logout-all
-- [x] Unit + middleware + repository + e2e test suites.
-- [x] CI pipeline running lint + tests + coverage threshold.
-
-## In Progress
-
-- [ ] Investigate and eliminate intermittent Jest open handles warning.
-
-## Next Priorities
-
-- [ ] Improve branch coverage on middleware/controller negative paths.
-- [ ] Harden auth/session security checks and edge-case validation.
-- [ ] Improve observability for auth/session critical failures.
-- [ ] Evaluate per-device/session metadata (ip, user-agent, createdAt) for better session UX.
-- [ ] Consider distributed rate-limit store hardening for multi-instance deployments.
-
-## Nice to Have
-
-- [ ] Add API versioning strategy.
-- [ ] Add smoke test script for production-like checks.
-- [ ] Add architecture decision records (ADRs) for key trade-offs.
+[ ] Fase 1 - Migrar base para TypeScript sem alterar arquitetura
+[ ] Alinhar toolchain: eslint@9 + @eslint/js@9 + @typescript-eslint
+[ ] Criar tsconfig.json para src/tests e build em dist
+[ ] Configurar Jest com ts-jest
+[ ] Atualizar scripts: dev/build/start/typecheck/test
+[ ] Converter src/**/*.js para .ts
+[ ] Converter tests/**/*.js para .ts
+[ ] Garantir lint verde
+[ ] Garantir test verde
+[ ] Garantir test:coverage verde
+[ ] Garantir CI verde no GitHub Actions
+[ ] Fase 2 - avaliar classes/casos de uso após estabilizar TS

@@ -134,12 +134,16 @@ sequenceDiagram
 
 ### Em andamento
 
-- [ ] Resolver warning de open handles no Jest (`--detectOpenHandles`).
+- [ ] Migração para TypeScript (Fase 1) sem alterar arquitetura.
+- [ ] Configurar `tsconfig`, `ts-jest` e ESLint para arquivos `.ts`.
+- [ ] Converter `src` de `.js` para `.ts`.
+- [ ] Converter `tests` de `.js` para `.ts`.
+- [ ] Garantir `lint`, `test` e `test:coverage` verdes local e CI.
 
 ### Próximos passos
 
+- [ ] Resolver warning de open handles no Jest (`--detectOpenHandles`).
 - [ ] Aumentar cobertura de branches em fluxos de erro críticos.
-- [ ] Evoluir rate limiting para estratégia distribuída robusta em produção.
 - [ ] Refinar observabilidade de falhas críticas de autenticação/sessão.
 
 ## Pré-requisitos
@@ -300,3 +304,9 @@ Workflow em `.github/workflows/ci.yml`:
 
 - Evoluir rate limit Redis para operação distribuída avançada.
 - Preparar comportamento para múltiplas instâncias.
+
+### Evolução de base de código
+
+- Migrar para TypeScript de forma incremental (Fase 1 sem refactor estrutural).
+- Após estabilizar TS, avaliar extração de casos de uso em classes (Fase 2).
+- Manter compatibilidade total com pipeline CI durante a migração.
