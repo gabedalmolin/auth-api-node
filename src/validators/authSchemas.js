@@ -19,4 +19,14 @@ const logoutSchema = z.object({
   refreshToken: z.string().trim().min(1, "refreshToken is required"),
 });
 
-module.exports = { registerSchema, loginSchema, refreshSchema, logoutSchema };
+const logoutSessionSchema = z.object({
+  jti: z.string().uuid("jti must be a valid uuid"),
+});
+
+module.exports = {
+  registerSchema,
+  loginSchema,
+  refreshSchema,
+  logoutSchema,
+  logoutSessionSchema,
+};

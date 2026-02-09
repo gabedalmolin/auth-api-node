@@ -19,6 +19,43 @@ class RefreshTokenRepository {
       data: { revoked: true },
     });
   }
+
+  async findActiveByUserId(userId) {
+    return prisma.refreshToken.findMany({
+      where: {
+        userId,
+        revoked: false,
+        expiresAt: { gt: new Date() },
+      },
+      select: {
+        jti: true,
+        createdAt: true,
+        expiresAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  async revokeByJtiAndUserId({ jti, userId }) {
+    return prisma.refreshToken.updateMany({
+      where: {
+        jti,
+        userId,
+        revoked: false,
+      },
+      data: { revoked: true },
+    });
+  }
+
+  async revokeAllByUserId(userId) {
+    return prisma.refreshToken.updateMany({
+      where: {
+        userId,
+        revoked: false,
+      },
+      data: { revoked: true },
+    });
+  }
 }
 
 module.exports = new RefreshTokenRepository();

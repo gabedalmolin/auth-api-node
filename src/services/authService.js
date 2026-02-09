@@ -173,6 +173,42 @@ class AuthService {
 
     await refreshTokenRepository.revokeByJti(decoded.jti);
   }
+
+  async listSessions(userId) {
+    if (!userId) {
+      throw new AppError("unauthorized", 401, "UNAUTHORIZED");
+    }
+
+    const sessions = await refreshTokenRepository.findActiveByUserId(userId);
+    return sessions;
+  }
+
+  async logoutSession({ userId, jti }) {
+    if (!userId) {
+      throw new AppError("unauthorized", 401, "UNAUTHORIZED");
+    }
+
+    if (!jti) {
+      throw new AppError("jti is required", 400, "INVALID_PAYLOAD");
+    }
+
+    const result = await refreshTokenRepository.revokeByJtiAndUserId({ jti, userId });
+
+    if (result.count === 0) {
+      throw new AppError("session not found", 404, "SESSION_NOT_FOUND");
+    }
+
+    return { revokedSessions: result.count };
+  }
+
+  async logoutAll(userId) {
+    if (!userId) {
+      throw new AppError("unauthorized", 401, "UNAUTHORIZED");
+    }
+
+    const result = await refreshTokenRepository.revokeAllByUserId(userId);
+    return { revokedSessions: result.count };
+  }
 }
 
 module.exports = new AuthService();

@@ -1,12 +1,5 @@
 const authService = require("../services/authService");
 
-/**
- * Controller responsável APENAS por:
- * - validar payload
- * - mapear erros para status HTTP
- * Regra: erro de auth = 401 | erro de input = 400
- */
-
 // REGISTER
 async function register(req, res, next) {
   try {
@@ -55,7 +48,7 @@ async function refresh(req, res, next) {
   }
 }
 
-// LOGOUT
+// LOGOUT (single refresh token by token value)
 async function logout(req, res, next) {
   try {
     const { refreshToken } = req.body;
@@ -71,4 +64,51 @@ async function logout(req, res, next) {
   }
 }
 
-module.exports = { register, login, refresh, logout };
+// LIST ACTIVE SESSIONS
+async function sessions(req, res, next) {
+  try {
+    const data = await authService.listSessions(req.userId);
+    return res.status(200).json({ sessions: data });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+// LOGOUT A SPECIFIC SESSION (by jti)
+async function logoutSession(req, res, next) {
+  try {
+    const { jti } = req.body;
+    const result = await authService.logoutSession({ userId: req.userId, jti });
+
+    return res.status(200).json({
+      message: "session revoked successfully",
+      ...result,
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+// LOGOUT ALL SESSIONS OF CURRENT USER
+async function logoutAll(req, res, next) {
+  try {
+    const result = await authService.logoutAll(req.userId);
+
+    return res.status(200).json({
+      message: "all sessions revoked successfully",
+      ...result,
+    });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+module.exports = {
+  register,
+  login,
+  refresh,
+  logout,
+  sessions,
+  logoutSession,
+  logoutAll,
+};

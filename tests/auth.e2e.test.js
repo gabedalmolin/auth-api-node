@@ -244,7 +244,83 @@ describe("Auth API - Testes completos", () => {
     });
   });
 
-  // ========== 5. LOGOUT ==========
+  // ========== 5. SESSION MANAGEMENT ==========
+  describe("Session management", () => {
+    beforeEach(async () => {
+      const email = `john+sessions-${Date.now()}@test.com`;
+
+      await request(app).post("/auth/register").send({
+        name: "John",
+        email,
+        password: "123456",
+      });
+
+      const login1 = await request(app).post("/auth/login").send({
+        email,
+        password: "123456",
+      });
+
+      accessToken = login1.body.token;
+
+      await request(app).post("/auth/login").send({
+        email,
+        password: "123456",
+      });
+    });
+
+    it("deve listar sessões ativas do usuário autenticado", async () => {
+      const res = await request(app)
+        .get("/auth/sessions")
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      expect(res.statusCode).toBe(200);
+      expect(Array.isArray(res.body.sessions)).toBe(true);
+      expect(res.body.sessions.length).toBeGreaterThanOrEqual(2);
+      expect(res.body.sessions[0]).toHaveProperty("jti");
+    });
+
+    it("deve revogar uma sessão específica por jti", async () => {
+      const listBefore = await request(app)
+        .get("/auth/sessions")
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      const targetJti = listBefore.body.sessions[0].jti;
+
+      const revokeRes = await request(app)
+        .post("/auth/logout-session")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({ jti: targetJti });
+
+      expect(revokeRes.statusCode).toBe(200);
+      expect(revokeRes.body).toHaveProperty("revokedSessions", 1);
+
+      const listAfter = await request(app)
+        .get("/auth/sessions")
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      const jtis = listAfter.body.sessions.map((s) => s.jti);
+      expect(jtis).not.toContain(targetJti);
+    });
+
+    it("deve revogar todas as sessões do usuário", async () => {
+      const revokeAllRes = await request(app)
+        .post("/auth/logout-all")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({});
+
+      expect(revokeAllRes.statusCode).toBe(200);
+      expect(revokeAllRes.body).toHaveProperty("revokedSessions");
+
+      const listAfter = await request(app)
+        .get("/auth/sessions")
+        .set("Authorization", `Bearer ${accessToken}`);
+
+      expect(listAfter.statusCode).toBe(200);
+      expect(listAfter.body.sessions).toHaveLength(0);
+    });
+  });
+
+  // ========== 6. LOGOUT ==========
   describe("Logout", () => {
     beforeEach(async () => {
       await request(app).post("/auth/register").send({
