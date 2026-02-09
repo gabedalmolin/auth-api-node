@@ -17,15 +17,10 @@ afterAll(async () => {
 describe("RefreshTokenRepository", () => {
   it("deve criar um refresh token", async () => {
     const user = await prisma.user.create({
-      data: {
-        name: "John",
-        email: "john@test.com",
-        password: "123456",
-      },
+      data: { name: "John", email: "john@test.com", password: "123456" },
     });
 
-    const rawToken = "token123";
-    const tokenHash = hashToken(rawToken);
+    const tokenHash = hashToken("token123");
 
     const token = await refreshTokenRepo.create({
       tokenHash,
@@ -40,11 +35,7 @@ describe("RefreshTokenRepository", () => {
 
   it("não deve permitir tokenHash duplicado", async () => {
     const user = await prisma.user.create({
-      data: {
-        name: "John",
-        email: "john@test.com",
-        password: "123456",
-      },
+      data: { name: "John", email: "john@test.com", password: "123456" },
     });
 
     const duplicatedTokenHash = hashToken("duplicado");
