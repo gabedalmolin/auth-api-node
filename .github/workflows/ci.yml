@@ -51,6 +51,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Run lint
+        run: npm run lint
+
       - name: Use Node.js 20
         uses: actions/setup-node@v4
         with:
