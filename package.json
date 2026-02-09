@@ -9,6 +9,7 @@
     "start": "node src/server.js",
     "pretest": "prisma migrate reset --force && prisma generate",
     "test": "jest --runInBand",
+    "pretest:coverage": "prisma migrate reset --force && prisma generate",
     "test:coverage": "jest --runInBand --coverage",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
