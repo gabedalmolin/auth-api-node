@@ -22,7 +22,7 @@ const waitForRedisReady = async (redisClient) => {
   await new Promise((resolve, reject) => {
     const onReady = () => {
       cleanup();
-      resolve();
+      resolve(undefined);
     };
     const onError = (err) => {
       cleanup();
