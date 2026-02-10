@@ -1,3 +1,14 @@
+const express = require("express");
+const {
+  register,
+  login,
+  refresh,
+  logout,
+  sessions,
+  logoutSession,
+  logoutAll,
+} = require("../controllers/authController");
+
 const authMiddleware = require("../middlewares/authMiddleware");
 const validate = require("../middlewares/validate");
 const {
