@@ -111,9 +111,7 @@ describe("AuthService (unit)", () => {
         password: "hashed",
       });
       bcrypt.compare.mockResolvedValue(true);
-      jwt.sign
-        .mockReturnValueOnce("access-token")
-        .mockReturnValueOnce("refresh-token");
+      jwt.sign.mockReturnValueOnce("access-token").mockReturnValueOnce("refresh-token");
       refreshTokenRepository.create.mockResolvedValue({ id: "rt-1" });
 
       const result = await authService.login({
@@ -196,9 +194,7 @@ describe("AuthService (unit)", () => {
         expiresAt: new Date(Date.now() + 60_000),
         tokenHash: hashToken("old-rt"),
       });
-      jwt.sign
-        .mockReturnValueOnce("new-access")
-        .mockReturnValueOnce("new-refresh");
+      jwt.sign.mockReturnValueOnce("new-access").mockReturnValueOnce("new-refresh");
 
       const result = await authService.refreshToken("old-rt");
 
@@ -349,18 +345,14 @@ describe("sessions", () => {
   });
 
   it("logoutSession throws UNAUTHORIZED when userId is missing", async () => {
-    await expect(
-      authService.logoutSession({ jti: "jti-1" }),
-    ).rejects.toMatchObject({
+    await expect(authService.logoutSession({ jti: "jti-1" })).rejects.toMatchObject({
       statusCode: 401,
       code: "UNAUTHORIZED",
     });
   });
 
   it("logoutSession throws INVALID_PAYLOAD when jti is missing", async () => {
-    await expect(
-      authService.logoutSession({ userId: 1 }),
-    ).rejects.toMatchObject({
+    await expect(authService.logoutSession({ userId: 1 })).rejects.toMatchObject({
       statusCode: 400,
       code: "INVALID_PAYLOAD",
     });
@@ -369,9 +361,7 @@ describe("sessions", () => {
   it("logoutSession throws SESSION_NOT_FOUND when repository returns count 0", async () => {
     refreshTokenRepository.revokeByJtiAndUserId.mockResolvedValue({ count: 0 });
 
-    await expect(
-      authService.logoutSession({ userId: 1, jti: "jti-1" }),
-    ).rejects.toMatchObject({
+    await expect(authService.logoutSession({ userId: 1, jti: "jti-1" })).rejects.toMatchObject({
       statusCode: 404,
       code: "SESSION_NOT_FOUND",
     });

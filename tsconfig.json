@@ -3,6 +3,7 @@
     "target": "ES2021",
     "module": "commonjs",
     "moduleResolution": "node",
+    "moduleDetection": "force",
     "rootDir": ".",
     "outDir": "dist",
     "esModuleInterop": true,

@@ -4,9 +4,11 @@ const authConfig = require("../../src/config/auth");
 
 describe("Auth Middleware", () => {
   const mockRes = () => {
-    const res = {};
-    res.status = jest.fn().mockReturnValue(res);
-    res.json = jest.fn();
+    const res = {
+      status: vi.fn(),
+      json: vi.fn(),
+    };
+    res.status.mockReturnValue(res);
     return res;
   };
 
