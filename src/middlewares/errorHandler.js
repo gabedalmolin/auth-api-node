@@ -1,6 +1,6 @@
 const AppError = require("../errors/AppError");
 
-module.exports = (err, req, res, _next) => {
+module.exports = (err, _req, res, _next) => {
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({
       error: err.message,
@@ -8,7 +8,7 @@ module.exports = (err, req, res, _next) => {
     });
   }
 
-  if (process.env.NODE_ENV != "test") {
+  if (process.env.NODE_ENV !== "test") {
     console.error(err);
   }
 

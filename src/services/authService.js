@@ -1,6 +1,6 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const { randomUUID, createHash, timingSafeEqual } = require("crypto");
+const { randomUUID, createHash, timingSafeEqual } = require("node:crypto");
 const authConfig = require("../config/auth");
 const userRepository = require("../repositories/userRepository");
 const refreshTokenRepository = require("../repositories/refreshTokenRepository");
@@ -70,9 +70,13 @@ class AuthService {
     });
 
     const refreshJti = randomUUID();
-    const refreshToken = jwt.sign({ id: user.id, jti: refreshJti }, authConfig.jwt.secret, {
-      expiresIn: REFRESH_TOKEN_EXPIRES_IN,
-    });
+    const refreshToken = jwt.sign(
+      { id: user.id, jti: refreshJti },
+      authConfig.jwt.secret,
+      {
+        expiresIn: REFRESH_TOKEN_EXPIRES_IN,
+      },
+    );
 
     await refreshTokenRepository.create({
       tokenHash: hashToken(refreshToken),
@@ -192,7 +196,10 @@ class AuthService {
       throw new AppError("jti is required", 400, "INVALID_PAYLOAD");
     }
 
-    const result = await refreshTokenRepository.revokeByJtiAndUserId({ jti, userId });
+    const result = await refreshTokenRepository.revokeByJtiAndUserId({
+      jti,
+      userId,
+    });
 
     if (result.count === 0) {
       throw new AppError("session not found", 404, "SESSION_NOT_FOUND");

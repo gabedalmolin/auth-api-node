@@ -221,7 +221,9 @@ describe("Auth API - Testes completos", () => {
     });
 
     it("deve acessar /users/me com token válido", async () => {
-      const res = await request(app).get("/users/me").set("Authorization", `Bearer ${accessToken}`);
+      const res = await request(app)
+        .get("/users/me")
+        .set("Authorization", `Bearer ${accessToken}`);
 
       expect(res.statusCode).toBe(200);
       expect(res.body).toHaveProperty("userId");

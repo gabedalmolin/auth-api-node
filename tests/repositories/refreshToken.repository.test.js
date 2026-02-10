@@ -1,4 +1,4 @@
-const { randomUUID, createHash } = require("crypto");
+const { randomUUID, createHash } = require("node:crypto");
 
 const refreshTokenRepo = require("../../src/repositories/refreshTokenRepository");
 const prisma = require("../../src/config/prisma");

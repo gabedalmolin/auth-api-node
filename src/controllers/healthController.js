@@ -1,6 +1,6 @@
 const prisma = require("../config/prisma");
 
-async function health(req, res) {
+async function health(_req, res) {
   return res.status(200).json({
     status: "ok",
     service: "auth-api",
@@ -8,7 +8,7 @@ async function health(req, res) {
   });
 }
 
-async function ready(req, res) {
+async function ready(_req, res) {
   try {
     await prisma.$queryRaw`SELECT 1`;
     return res.status(200).json({

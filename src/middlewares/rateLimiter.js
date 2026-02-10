@@ -8,7 +8,10 @@ const maxRequests = Number(process.env.RATE_LIMIT_MAX_REQUESTS || 100);
 const memoryBuckets = new Map();
 
 const consumeMemory = (key, now) => {
-  const bucket = memoryBuckets.get(key) || { count: 0, expiresAt: now + windowMs };
+  const bucket = memoryBuckets.get(key) || {
+    count: 0,
+    expiresAt: now + windowMs,
+  };
 
   if (now > bucket.expiresAt) {
     bucket.count = 0;
@@ -31,12 +34,14 @@ const consumeRedis = async (key) => {
   return count;
 };
 
-module.exports = async (req, res, next) => {
+module.exports = async (req, _res, next) => {
   const key = `rl:${req.ip || "global"}`;
   const now = Date.now();
 
   try {
-    const count = redisEnabled ? await consumeRedis(key) : consumeMemory(key, now);
+    const count = redisEnabled
+      ? await consumeRedis(key)
+      : consumeMemory(key, now);
 
     if (count > maxRequests) {
       return next(new AppError("too many requests", 429, "TOO_MANY_REQUESTS"));

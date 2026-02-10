@@ -1,4 +1,4 @@
-const { randomUUID } = require("crypto");
+const { randomUUID } = require("node:crypto");
 
 // Gera ou propaga o correlation id de cada requisição
 module.exports = (req, res, next) => {

@@ -6,7 +6,8 @@ const options = {
     info: {
       title: "Auth API",
       version: "1.0.0",
-      description: "Authentication API with JWT, refresh token rotation, and protected routes.",
+      description:
+        "Authentication API with JWT, refresh token rotation, and protected routes.",
     },
     servers: [{ url: "http://localhost:3000", description: "Local server" }],
     components: {
@@ -23,7 +24,11 @@ const options = {
           required: ["name", "email", "password"],
           properties: {
             name: { type: "string", example: "John" },
-            email: { type: "string", format: "email", example: "john@test.com" },
+            email: {
+              type: "string",
+              format: "email",
+              example: "john@test.com",
+            },
             password: { type: "string", example: "123456" },
           },
         },
@@ -31,7 +36,11 @@ const options = {
           type: "object",
           required: ["email", "password"],
           properties: {
-            email: { type: "string", format: "email", example: "john@test.com" },
+            email: {
+              type: "string",
+              format: "email",
+              example: "john@test.com",
+            },
             password: { type: "string", example: "123456" },
           },
         },
