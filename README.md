@@ -23,7 +23,8 @@ O objetivo é manter uma base pronta para evolução, priorizando:
 - JWT (`jsonwebtoken`) + `bcryptjs`
 - Zod (validação de payload)
 - Pino (logging estruturado)
-- Jest + Supertest
+- Vitest + Supertest
+- Lint/format com Biome
 - Swagger UI + swagger-jsdoc
 - ioredis
 
@@ -130,7 +131,7 @@ sequenceDiagram
 - [X] `POST /auth/logout-all`
 - [X] Testes automatizados em múltiplas camadas.
 - [X] CI com execução de testes e cobertura mínima.
-- [X] Lint (`eslint`) e formatação (`prettier`) padronizados.
+- [X] Lint/format com Biomepadronizados.
 
 ### Em andamento
 
@@ -296,7 +297,6 @@ Workflow em `.github/workflows/ci.yml`:
 
 ### Confiabilidade
 
-- Eliminar open handles no Jest.
 - Cobrir cenários negativos e de erro de infra.
 - Refinar observabilidade de falhas críticas.
 

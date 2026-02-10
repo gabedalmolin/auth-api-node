@@ -8,9 +8,9 @@
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "pretest": "prisma migrate reset --force && prisma generate",
-    "test": "jest --runInBand",
+    "test": "vitest run --config vitest.config.mjs --pool=forks --maxWorkers=1",
     "pretest:coverage": "prisma migrate reset --force && prisma generate",
-    "test:coverage": "jest --runInBand --coverage",
+    "test:coverage": "vitest run --config vitest.config.mjs --coverage --pool=forks --maxWorkers=1",
     "lint": "biome lint .",
     "lint:fix": "biome lint . --write",
     "format": "biome check . --formatter-enabled=true --linter-enabled=false --assist-enabled=false",
@@ -20,7 +20,9 @@
     "test:vitest": "vitest run --config vitest.config.mjs --pool=forks --maxWorkers=1",
     "test:vitest:coverage": "vitest run --config vitest.config.mjs --coverage --pool=forks --maxWorkers=1",
     "pretest:vitest": "prisma migrate reset --force && prisma generate",
-    "pretest:vitest:coverage": "prisma migrate reset --force && prisma generate"
+    "pretest:vitest:coverage": "prisma migrate reset --force && prisma generate",
+    "test:jest": "jest --runInBand",
+    "test:jest:coverage": "jest --runInBand --coverage"
   },
   "collectCoverageFrom": [
     "src/**/*.js",
