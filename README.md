@@ -125,25 +125,22 @@ sequenceDiagram
 - [X] Tratamento de erro unificado com `AppError`.
 - [X] Validação de payload com Zod.
 - [X] Rate limiting nas rotas de autenticação (Redis com fallback em memória).
-- [X] Session management:
-- [X] `GET /auth/sessions`
-- [X] `POST /auth/logout-session`
-- [X] `POST /auth/logout-all`
+- [X] Session management (`GET /auth/sessions`, `POST /auth/logout-session`, `POST /auth/logout-all`).
 - [X] Testes automatizados em múltiplas camadas.
 - [X] CI com execução de testes e cobertura mínima.
-- [X] Lint/format com Biomepadronizados.
+- [X] Lint/format com Biome padronizados.
 
 ### Em andamento
 
 - [ ] Migração para TypeScript (Fase 1) sem alterar arquitetura.
-- [ ] Configurar `tsconfig`, `ts-jest` e ESLint para arquivos `.ts`.
+- [ ] Configurar `tsconfig` e regras do Biome para arquivos `.ts`.
 - [ ] Converter `src` de `.js` para `.ts`.
 - [ ] Converter `tests` de `.js` para `.ts`.
 - [ ] Garantir `lint`, `test` e `test:coverage` verdes local e CI.
 
 ### Próximos passos
 
-- [ ] Resolver warning de open handles no Jest (`--detectOpenHandles`).
+- [ ] Resolver warning de open handles nos testes (`vitest`).
 - [ ] Aumentar cobertura de branches em fluxos de erro críticos.
 - [ ] Refinar observabilidade de falhas críticas de autenticação/sessão.
 
@@ -182,7 +179,8 @@ Para testes, o projeto usa `tests/.env.test`.
 - `npm run lint:fix`: corrige problemas de lint automaticamente.
 - `npm run format`: verifica formatação.
 - `npm run format:write`: aplica formatação.
-- `npm test -- --runInBand`: roda suíte completa.
+- `npm test`: roda suíte completa (Vitest).
+- `npm run test:vitest`: roda suíte completa explicitamente com Vitest.
 - `npm run test:coverage`: roda suíte com cobertura.
 
 ## Testes e cobertura
@@ -197,7 +195,7 @@ A suíte inclui:
 Notas importantes:
 
 - `pretest` e `pretest:coverage` executam `prisma migrate reset --force && prisma generate` para garantir ambiente reproduzível.
-- A CI aplica `coverageThreshold` global para evitar regressão silenciosa.
+- A CI aplica thresholds de cobertura definidos em `vitest.config.mjs`.
 
 ## Endpoints
 
@@ -277,6 +275,7 @@ tests/
 Workflow em `.github/workflows/ci.yml`:
 
 - provisiona PostgreSQL no GitHub Actions;
+- provisiona Redis no GitHub Actions;
 - instala dependências.
 - executa testes com cobertura;
 - falha o pipeline se thresholds mínimos não forem atendidos.
