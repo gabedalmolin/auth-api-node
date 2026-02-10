@@ -9,7 +9,7 @@ export default defineConfig({
       "./tests/vitest.setup.mjs",
       "./tests/setup.js",
     ],
-    include: ["tests/**/*.test.js"],
+    include: ["tests/**/*.test.{js,ts}"],
     clearMocks: true,
     mockReset: true,
     restoreMocks: true,
@@ -18,7 +18,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],
-      include: ["src/**/*.js"],
+      include: ["src/**/*.{js,ts}"],
       exclude: ["src/server.js", "src/docs/**"],
       thresholds: {
         lines: 80,

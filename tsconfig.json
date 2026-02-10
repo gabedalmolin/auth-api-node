@@ -12,7 +12,7 @@
     "allowJs": true,
     "checkJs": false,
     "noEmit": true,
-    "types": ["node", "jest"]
+    "types": ["node", "jest", "vitest/globals"]
   },
   "include": ["src/**/*.ts", "tests/**/*.ts", "src/**/*.js", "tests/**/*.js"],
   "exclude": ["node_modules", "dist", "coverage"]

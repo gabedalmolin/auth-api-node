@@ -30,7 +30,7 @@ async function closeRedisConnection() {
 
   try {
     await redisClient.quit();
-  } catch (error) {
+  } catch (_error) {
     // Em teardown paralelo/intermitente, garante encerramento sem quebrar a suíte
     redisClient.disconnect();
   }
