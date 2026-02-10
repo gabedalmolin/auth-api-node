@@ -24,8 +24,8 @@ beforeEach(async () => {
 });
 
 //  Tokens usados nos testes
-let accessToken;
-let refreshToken;
+let accessToken: string;
+let refreshToken: string;
 
 describe("Auth API - Testes completos", () => {
   // ========== 1. REGISTER ==========
@@ -221,9 +221,7 @@ describe("Auth API - Testes completos", () => {
     });
 
     it("deve acessar /users/me com token válido", async () => {
-      const res = await request(app)
-        .get("/users/me")
-        .set("Authorization", `Bearer ${accessToken}`);
+      const res = await request(app).get("/users/me").set("Authorization", `Bearer ${accessToken}`);
 
       expect(res.statusCode).toBe(200);
       expect(res.body).toHaveProperty("userId");
