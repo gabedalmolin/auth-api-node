@@ -1,13 +1,3 @@
-const express = require("express");
-const {
-  register,
-  login,
-  refresh,
-  logout,
-  sessions,
-  logoutSession,
-  logoutAll,
-} = require("../controllers/authController");
 const authMiddleware = require("../middlewares/authMiddleware");
 const validate = require("../middlewares/validate");
 const {
@@ -32,12 +22,7 @@ router.get("/profile", authMiddleware, (req, res) => {
 });
 
 router.get("/sessions", authMiddleware, sessions);
-router.post(
-  "/logout-session",
-  authMiddleware,
-  validate(logoutSessionSchema),
-  logoutSession,
-);
+router.post("/logout-session", authMiddleware, validate(logoutSessionSchema), logoutSession);
 router.post("/logout-all", authMiddleware, logoutAll);
 
 module.exports = router;
