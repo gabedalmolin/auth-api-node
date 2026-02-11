@@ -17,7 +17,7 @@ O objetivo é manter uma base pronta para evolução, priorizando:
 
 ## Stack
 
-- Node.js 18+
+- Node.js 20 LTS
 - Express 5
 - Prisma 7 + PostgreSQL
 - JWT (`jsonwebtoken`) + `bcryptjs`
@@ -121,7 +121,7 @@ sequenceDiagram
 ### Pré-requisitos
 
 - Docker + Docker Compose
-- Node.js 18+
+- Node.js 20 LTS
 - npm
 
 ### Implementado
