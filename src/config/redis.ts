@@ -46,7 +46,6 @@ async function closeRedisConnection() {
   }
 }
 
-
 module.exports = {
   redisClient,
   redisEnabled,
