@@ -28,7 +28,7 @@ Escopo principal:
 
 - Node.js 20 LTS
 - Express 5
-- TypeScript 7
+- TypeScript 5.9
 - Prisma 7 + PostgreSQL
 - Redis (ioredis)
 - JWT (`jsonwebtoken`) + `bcryptjs`
@@ -78,12 +78,12 @@ Middlewares críticos:
 
 Últimas entregas relevantes em `main`:
 
-- `#14` estabilidade de runtime de testes (teardown Prisma)
-- `#15` aumento de branch coverage em fluxos de auth/rate limiter
-- `#16` redução de ruído de logs em execução de teste
-- `#18` cobertura completa de branches em `src/config/prisma.ts`
-- `#19` cobertura completa de branches em `src/logger.ts`
-- `#20` cobertura completa de branches em `validate.ts` e `errorHandler.ts`
+- [#14](https://github.com/john-dalmolin/auth-api-node/pull/14) estabilidade de runtime de testes (teardown Prisma)
+- [#15](https://github.com/john-dalmolin/auth-api-node/pull/15) aumento de branch coverage em fluxos de auth/rate limiter
+- [#16](https://github.com/john-dalmolin/auth-api-node/pull/16) redução de ruído de logs em execução de teste
+- [#18](https://github.com/john-dalmolin/auth-api-node/pull/18) cobertura completa de branches em `src/config/prisma.ts`
+- [#19](https://github.com/john-dalmolin/auth-api-node/pull/19) cobertura completa de branches em `src/logger.ts`
+- [#20](https://github.com/john-dalmolin/auth-api-node/pull/20) cobertura completa de branches em `validate.ts` e `errorHandler.ts`
 
 ## Backlog atual
 
@@ -102,6 +102,8 @@ Subir infraestrutura e aplicação:
 ```bash
 docker-compose up -d postgres redis
 npm install
+npx prisma migrate deploy
+npx prisma generate
 npm run dev
 ```
 
@@ -109,7 +111,7 @@ Arquivo `.env`:
 
 ```env
 DATABASE_URL="postgresql://auth_user:auth_password@localhost:5432/auth_api"
-JWT_SECRET="super_secret_key"
+JWT_SECRET="<gere-um-segredo-forte-com-no-minimo-32-caracteres>"
 PORT=3000
 REDIS_URL="redis://localhost:6379"
 RATE_LIMIT_WINDOW_MS=60000
@@ -127,6 +129,15 @@ Para testes, usar `tests/.env.test`.
 - `npm test`: suíte principal (Vitest)
 - `npm run test:coverage:jest`: cobertura com Jest
 - `npm run typecheck`: verificação de tipos
+
+## Validação rápida
+
+```bash
+npm run lint
+npm run test:coverage:jest
+npx jest --config jest.config.cjs --runInBand --detectOpenHandles --openHandlesTimeout=5000
+```
+
 
 ## Endpoints principais
 
