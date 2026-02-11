@@ -1,4 +1,4 @@
-const prisma = require("../config/prisma");
+const prisma = require("../config/prisma.ts");
 
 async function health(_req, res) {
   return res.status(200).json({

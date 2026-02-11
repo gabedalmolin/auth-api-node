@@ -1,5 +1,5 @@
 const AppError = require("../errors/AppError");
-const { redisClient, redisEnabled } = require("../config/redis");
+const { redisClient, redisEnabled } = require("../config/redis.ts");
 
 const windowMs = Number(process.env.RATE_LIMIT_WINDOW_MS || 60_000);
 const maxRequests = Number(process.env.RATE_LIMIT_MAX_REQUESTS || 100);

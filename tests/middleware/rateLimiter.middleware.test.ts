@@ -3,7 +3,7 @@ const mockRes = () => ({});
 const mockNext = () => vi.fn();
 
 const RATE_LIMITER_PATH = require.resolve("../../src/middlewares/rateLimiter");
-const REDIS_CONFIG_PATH = require.resolve("../../src/config/redis");
+const REDIS_CONFIG_PATH = require.resolve("../../src/config/redis.ts");
 
 const loadRateLimiter = ({ resetRedis = false } = {}) => {
   if (resetRedis) {
@@ -13,7 +13,7 @@ const loadRateLimiter = ({ resetRedis = false } = {}) => {
   return require("../../src/middlewares/rateLimiter");
 };
 
-const loadRedisConfig = () => require("../../src/config/redis");
+const loadRedisConfig = () => require("../../src/config/redis.ts");
 
 const waitForRedisReady = async (redisClient) => {
   if (!redisClient) throw new Error("redisClient não inicializado");

@@ -14,7 +14,7 @@ const request = require("supertest");
 const jwt = require("jsonwebtoken");
 
 const app = require("../src/app.ts");
-const prisma = require("../src/config/prisma");
+const prisma = require("../src/config/prisma.ts");
 const authConfig = require("../src/config/auth.ts");
 
 //  Limpa o banco antes de CADA teste

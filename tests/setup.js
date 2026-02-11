@@ -1,5 +1,5 @@
-const prisma = require("../src/config/prisma");
-const { closeRedisConnection } = require("../src/config/redis");
+const prisma = require("../src/config/prisma.ts");
+const { closeRedisConnection } = require("../src/config/redis.ts");
 
 beforeEach(async () => {
   await prisma.refreshToken.deleteMany();

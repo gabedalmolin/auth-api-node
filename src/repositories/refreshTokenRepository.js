@@ -1,4 +1,4 @@
-const prisma = require("../config/prisma");
+const prisma = require("../config/prisma.ts");
 
 class RefreshTokenRepository {
   async create({ tokenHash, jti, userId, expiresAt }) {
