@@ -7,7 +7,7 @@ const {
   sessions,
   logoutSession,
   logoutAll,
-} = require("../controllers/authController");
+} = require("../controllers/authController.ts");
 
 const authMiddleware = require("../middlewares/authMiddleware.ts");
 const validate = require("../middlewares/validate");
