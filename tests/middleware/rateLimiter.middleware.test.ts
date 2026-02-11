@@ -2,7 +2,7 @@ const mockReq = (ip = "127.0.0.1") => ({ ip });
 const mockRes = () => ({});
 const mockNext = () => vi.fn();
 
-const RATE_LIMITER_PATH = require.resolve("../../src/middlewares/rateLimiter");
+const RATE_LIMITER_PATH = require.resolve("../../src/middlewares/rateLimiter.ts");
 const REDIS_CONFIG_PATH = require.resolve("../../src/config/redis.ts");
 
 const loadRateLimiter = ({ resetRedis = false } = {}) => {
@@ -10,7 +10,7 @@ const loadRateLimiter = ({ resetRedis = false } = {}) => {
     delete require.cache[REDIS_CONFIG_PATH];
   }
   delete require.cache[RATE_LIMITER_PATH];
-  return require("../../src/middlewares/rateLimiter");
+  return require("../../src/middlewares/rateLimiter.ts");
 };
 
 const loadRedisConfig = () => require("../../src/config/redis.ts");
