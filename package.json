@@ -1,7 +1,7 @@
 {
   "name": "auth-api",
   "version": "1.0.0",
-  "description": "",
+  "description": "Production-oriented authentication API with JWT session rotation, Prisma/PostgreSQL persistence, Redis rate limiting, and high automated test coverage.",
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
@@ -41,7 +41,18 @@
       "statements": 80
     }
   },
-  "keywords": [],
+  "keywords": [
+    "nodejs",
+    "express",
+    "typescript",
+    "prisma",
+    "postgresql",
+    "redis",
+    "jwt",
+    "auth-api",
+    "testing",
+    "portfolio-project"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
