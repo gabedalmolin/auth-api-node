@@ -23,7 +23,8 @@ O objetivo é manter uma base pronta para evolução, priorizando:
 - JWT (`jsonwebtoken`) + `bcryptjs`
 - Zod (validação de payload)
 - Pino (logging estruturado)
-- Vitest + Supertest
+- Vitest + Supertest (execução)
+- Jest (cobertura)
 - Lint/format com Biome
 - Swagger UI + swagger-jsdoc
 - ioredis
@@ -140,7 +141,7 @@ sequenceDiagram
 
 ### Próximos passos
 
-- [ ] Resolver warning de open handles nos testes (`vitest`).
+- [ ] Resolver warning de open handles ao rodar cobertura (`jest --coverage`).
 - [ ] Aumentar cobertura de branches em fluxos de erro críticos.
 - [ ] Refinar observabilidade de falhas críticas de autenticação/sessão.
 
@@ -181,7 +182,8 @@ Para testes, o projeto usa `tests/.env.test`.
 - `npm run format:write`: aplica formatação.
 - `npm test`: roda suíte completa (Vitest).
 - `npm run test:vitest`: roda suíte completa explicitamente com Vitest.
-- `npm run test:coverage`: roda suíte com cobertura.
+- `npm run test:coverage`: roda cobertura estável via Jest.
+- `npm run test:coverage:vitest`: opção experimental de cobertura via Vitest.
 
 ## Testes e cobertura
 
@@ -194,8 +196,8 @@ A suíte inclui:
 
 Notas importantes:
 
-- `pretest` e `pretest:coverage` executam `prisma migrate reset --force && prisma generate` para garantir ambiente reproduzível.
-- A CI aplica thresholds de cobertura definidos em `vitest.config.mjs`.
+- `pretest`, `pretest:coverage` e scripts de cobertura (`pretest:coverage:jest` / `pretest:coverage:vitest`) executam `prisma migrate reset --force && prisma generate` para garantir ambiente reproduzível.
+- Thresholds de cobertura estão definidos em `jest.config.cjs`.
 
 ## Endpoints
 
@@ -268,6 +270,7 @@ tests/
 - services/
 - setup.js
 - jest.env.js
+- jest.globals.js
 ```
 
 ## CI
