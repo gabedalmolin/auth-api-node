@@ -1,4 +1,4 @@
-const baseLogger = require("../logger");
+const baseLogger = require("../logger.ts");
 
 module.exports = (req, res, next) => {
   const logger = baseLogger.child({ correlationId: req.correlationId });

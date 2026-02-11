@@ -1,4 +1,4 @@
-const AppError = require("../errors/AppError");
+const AppError = require("../errors/AppError.ts");
 
 module.exports = (err, _req, res, _next) => {
   if (err instanceof AppError) {

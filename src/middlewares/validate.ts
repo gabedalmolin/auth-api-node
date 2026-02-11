@@ -1,4 +1,4 @@
-const AppError = require("../errors/AppError");
+const AppError = require("../errors/AppError.ts");
 
 module.exports = (schema) => (req, _res, next) => {
   const result = schema.safeParse(req.body);

@@ -4,7 +4,7 @@ const { randomUUID, createHash, timingSafeEqual } = require("node:crypto");
 const authConfig = require("../config/auth.ts");
 const userRepository = require("../repositories/userRepository.ts");
 const refreshTokenRepository = require("../repositories/refreshTokenRepository.ts");
-const AppError = require("../errors/AppError");
+const AppError = require("../errors/AppError.ts");
 
 const HASH_ROUNDS = 8;
 const ACCESS_TOKEN_EXPIRES_IN = authConfig.jwt.expiresIn;

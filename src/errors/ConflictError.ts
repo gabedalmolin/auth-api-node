@@ -1,4 +1,4 @@
-const AppError = require("./AppError");
+const AppError = require("./AppError.ts");
 
 class ConflictError extends AppError {
   constructor(message = "conflict") {
