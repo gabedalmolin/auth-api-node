@@ -2,16 +2,30 @@ const mockReq = (ip = "127.0.0.1") => ({ ip });
 const mockRes = () => ({});
 const mockNext = () => vi.fn();
 
-type RedisModule = typeof import("../../src/config/redis.ts");
-let redisModule: RedisModule | undefined;
+interface RedisClientLike {
+  status: string;
+  off: (event: string, listener: (...args: unknown[]) => void) => void;
+  once: (event: string, listener: (...args: unknown[]) => void) => void;
+  get: (key: string) => Promise<string | null>;
+  pttl: (key: string) => Promise<number>;
+  incr: (key: string) => Promise<number>;
+}
+
+interface RedisModuleLike {
+  redisClient: RedisClientLike | null;
+  closeRedisConnection: () => Promise<void>;
+}
+
+let redisModule: RedisModuleLike | undefined;
 
 const loadRateLimiter = () => {
-  redisModule = require("../../src/config/redis.ts");
+  redisModule = require("../../src/config/redis.ts") as RedisModuleLike;
   const rateLimiter = require("../../src/middlewares/rateLimiter.ts");
   return rateLimiter;
 };
 
-const loadRedisConfig = (): RedisModule => redisModule ?? require("../../src/config/redis.ts");
+const loadRedisConfig = (): RedisModuleLike =>
+  (redisModule ?? require("../../src/config/redis.ts")) as RedisModuleLike;
 
 const waitForRedisReady = async (redisClient) => {
   if (!redisClient) throw new Error("redisClient não inicializado");
