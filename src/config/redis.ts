@@ -22,19 +22,30 @@ async function closeRedisConnection() {
   if (!redisClient) return;
   if (redisClient.status === "end") return;
 
-  // Se não estiver pronto para comando, encerra direto sem quit()
-  if (redisClient.status !== "ready") {
+  const forceDisconnect = () => {
     redisClient.disconnect();
+
+    // Em testes, força fechamento do stream para evitar timer pendente do ioredis
+    if (process.env.NODE_ENV === "test") {
+      const stream = redisClient.connector?.stream;
+      if (stream && !stream.destroyed) {
+        stream.destroy();
+      }
+    }
+  };
+
+  if (redisClient.status !== "ready") {
+    forceDisconnect();
     return;
   }
 
   try {
     await redisClient.quit();
   } catch (_error) {
-    // Em teardown paralelo/intermitente, garante encerramento sem quebrar a suíte
-    redisClient.disconnect();
+    forceDisconnect();
   }
 }
+
 
 module.exports = {
   redisClient,
