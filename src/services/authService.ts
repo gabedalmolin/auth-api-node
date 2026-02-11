@@ -2,8 +2,8 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { randomUUID, createHash, timingSafeEqual } = require("node:crypto");
 const authConfig = require("../config/auth.ts");
-const userRepository = require("../repositories/userRepository");
-const refreshTokenRepository = require("../repositories/refreshTokenRepository");
+const userRepository = require("../repositories/userRepository.ts");
+const refreshTokenRepository = require("../repositories/refreshTokenRepository.ts");
 const AppError = require("../errors/AppError");
 
 const HASH_ROUNDS = 8;
