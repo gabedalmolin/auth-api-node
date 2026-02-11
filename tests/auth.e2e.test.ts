@@ -13,7 +13,7 @@
 const request = require("supertest");
 const jwt = require("jsonwebtoken");
 
-const app = require("../src/app");
+const app = require("../src/app.ts");
 const prisma = require("../src/config/prisma");
 const authConfig = require("../src/config/auth");
 
