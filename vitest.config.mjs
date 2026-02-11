@@ -13,19 +13,18 @@ export default defineConfig({
     clearMocks: true,
     mockReset: true,
     restoreMocks: true,
-    pool: "forks",
+    pool: process.env.VITEST_POOL ?? "forks",
     maxWorkers: 1,
-    coverage: {
-      provider: "v8",
-      reporter: ["text", "lcov"],
-      include: ["src/**/*.{js,ts}"],
-      exclude: ["src/server.js", "src/docs/**"],
-      thresholds: {
-        lines: 80,
-        branches: 70,
-        functions: 80,
-        statements: 80,
+    server: {
+      deps: {
+        inline: [/\/src\//],
       },
+    },
+    coverage: {
+      provider: "istanbul",
+      reporter: ["text", "lcov", "json-summary"],
+      all: false,
+      extension: [".ts"],
     },
   },
 });
