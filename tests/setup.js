@@ -1,4 +1,5 @@
 const prisma = require("../src/config/prisma.ts");
+const { closePrismaConnection } = require("../src/config/prisma.ts");
 const { closeRedisConnection } = require("../src/config/redis.ts");
 
 beforeEach(async () => {
@@ -8,5 +9,5 @@ beforeEach(async () => {
 
 afterAll(async () => {
   await closeRedisConnection();
-  await prisma.$disconnect();
+  await closePrismaConnection();
 });
