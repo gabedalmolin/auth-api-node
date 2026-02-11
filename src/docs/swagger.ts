@@ -6,8 +6,7 @@ const options = {
     info: {
       title: "Auth API",
       version: "1.0.0",
-      description:
-        "Authentication API with JWT, refresh token rotation, and protected routes.",
+      description: "Authentication API with JWT, refresh token rotation, and protected routes.",
     },
     servers: [{ url: "http://localhost:3000", description: "Local server" }],
     components: {
@@ -61,7 +60,7 @@ const options = {
       },
     },
   },
-  apis: ["./src/routes/*.js"],
+  apis: ["./src/routes/*.ts", "./src/routes/*.js"],
 };
 
 const swaggerSpec = swaggerJsdoc(options);
