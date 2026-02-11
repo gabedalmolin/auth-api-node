@@ -13,9 +13,9 @@
 const request = require("supertest");
 const jwt = require("jsonwebtoken");
 
-const app = require("../src/app");
-const prisma = require("../src/config/prisma");
-const authConfig = require("../src/config/auth");
+const app = require("../src/app.ts");
+const prisma = require("../src/config/prisma.ts");
+const authConfig = require("../src/config/auth.ts");
 
 //  Limpa o banco antes de CADA teste
 beforeEach(async () => {
@@ -106,6 +106,9 @@ describe("Auth API - Testes completos", () => {
 
       expect(res.statusCode).toBe(200);
       expect(res.body).toHaveProperty("token");
+      expect(typeof res.body.token).toBe("string");
+      expect(res.body).toHaveProperty("refreshToken");
+      expect(typeof res.body.refreshToken).toBe("string");
       expect(res.body).toHaveProperty("refreshToken");
     });
 
@@ -162,6 +165,9 @@ describe("Auth API - Testes completos", () => {
 
       expect(res.statusCode).toBe(200);
       expect(res.body).toHaveProperty("token");
+      expect(typeof res.body.token).toBe("string");
+      expect(res.body).toHaveProperty("refreshToken");
+      expect(typeof res.body.refreshToken).toBe("string");
     });
 
     it("não deve aceitar refresh token inválido", async () => {
@@ -357,7 +363,3 @@ describe("Auth API - Testes completos", () => {
   });
 });
 
-// Fecha conexão do Prisma (evita warning do Jest)
-afterAll(async () => {
-  await prisma.$disconnect();
-});

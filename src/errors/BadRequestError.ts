@@ -1,4 +1,4 @@
-const AppError = require("./AppError");
+const AppError = require("./AppError.ts");
 
 class BadRequestError extends AppError {
   constructor(message = "bad request") {

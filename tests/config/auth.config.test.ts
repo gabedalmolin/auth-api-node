@@ -1,6 +1,6 @@
 describe("auth config", () => {
   const originalEnv = process.env;
-  const authConfigPath = require.resolve("../../src/config/auth");
+  const authConfigPath = require.resolve("../../src/config/auth.ts");
 
   beforeEach(() => {
     vi.resetModules();

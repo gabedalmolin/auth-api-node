@@ -1,7 +1,7 @@
 const { randomUUID, createHash } = require("node:crypto");
 
-const refreshTokenRepo = require("../../src/repositories/refreshTokenRepository");
-const prisma = require("../../src/config/prisma");
+const refreshTokenRepo = require("../../src/repositories/refreshTokenRepository.ts");
+const prisma = require("../../src/config/prisma.ts");
 
 const hashToken = (token) => createHash("sha256").update(token).digest("hex");
 

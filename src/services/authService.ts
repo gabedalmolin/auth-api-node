@@ -1,10 +1,10 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { randomUUID, createHash, timingSafeEqual } = require("node:crypto");
-const authConfig = require("../config/auth");
-const userRepository = require("../repositories/userRepository");
-const refreshTokenRepository = require("../repositories/refreshTokenRepository");
-const AppError = require("../errors/AppError");
+const authConfig = require("../config/auth.ts");
+const userRepository = require("../repositories/userRepository.ts");
+const refreshTokenRepository = require("../repositories/refreshTokenRepository.ts");
+const AppError = require("../errors/AppError.ts");
 
 const HASH_ROUNDS = 8;
 const ACCESS_TOKEN_EXPIRES_IN = authConfig.jwt.expiresIn;
@@ -93,7 +93,7 @@ class AuthService {
       throw new AppError("invalid refresh token", 400, "INVALID_REFRESH_TOKEN");
     }
 
-    let decoded;
+    let decoded = null;
     try {
       decoded = jwt.verify(token, authConfig.jwt.secret);
     } catch {
@@ -154,7 +154,7 @@ class AuthService {
       throw new AppError("invalid refresh token", 400, "INVALID_REFRESH_TOKEN");
     }
 
-    let decoded;
+    let decoded = null;
     try {
       decoded = jwt.verify(token, authConfig.jwt.secret);
     } catch {

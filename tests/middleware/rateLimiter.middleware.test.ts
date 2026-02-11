@@ -2,18 +2,30 @@ const mockReq = (ip = "127.0.0.1") => ({ ip });
 const mockRes = () => ({});
 const mockNext = () => vi.fn();
 
-const RATE_LIMITER_PATH = require.resolve("../../src/middlewares/rateLimiter");
-const REDIS_CONFIG_PATH = require.resolve("../../src/config/redis");
+interface RedisClientLike {
+  status: string;
+  off: (event: string, listener: (...args: unknown[]) => void) => void;
+  once: (event: string, listener: (...args: unknown[]) => void) => void;
+  get: (key: string) => Promise<string | null>;
+  pttl: (key: string) => Promise<number>;
+  incr: (key: string) => Promise<number>;
+}
 
-const loadRateLimiter = ({ resetRedis = false } = {}) => {
-  if (resetRedis) {
-    delete require.cache[REDIS_CONFIG_PATH];
-  }
-  delete require.cache[RATE_LIMITER_PATH];
-  return require("../../src/middlewares/rateLimiter");
+interface RedisModuleLike {
+  redisClient: RedisClientLike | null;
+  closeRedisConnection: () => Promise<void>;
+}
+
+let redisModule: RedisModuleLike | undefined;
+
+const loadRateLimiter = () => {
+  redisModule = require("../../src/config/redis.ts") as RedisModuleLike;
+  const rateLimiter = require("../../src/middlewares/rateLimiter.ts");
+  return rateLimiter;
 };
 
-const loadRedisConfig = () => require("../../src/config/redis");
+const loadRedisConfig = (): RedisModuleLike =>
+  (redisModule ?? require("../../src/config/redis.ts")) as RedisModuleLike;
 
 const waitForRedisReady = async (redisClient) => {
   if (!redisClient) throw new Error("redisClient não inicializado");
@@ -42,6 +54,7 @@ describe("rateLimiter middleware", () => {
   const originalRedisUrl = process.env.REDIS_URL;
 
   beforeEach(() => {
+    vi.resetModules();
     vi.restoreAllMocks();
     vi.clearAllMocks();
 
@@ -50,10 +63,10 @@ describe("rateLimiter middleware", () => {
   });
 
   afterEach(async () => {
-    const redisModule = require.cache[REDIS_CONFIG_PATH]?.exports;
     if (redisModule?.closeRedisConnection) {
       await redisModule.closeRedisConnection();
     }
+    redisModule = undefined;
   });
 
   afterAll(() => {
@@ -62,7 +75,7 @@ describe("rateLimiter middleware", () => {
 
   it("allows request with memory strategy when redis is disabled", async () => {
     process.env.REDIS_URL = "";
-    const rateLimiter = loadRateLimiter({ resetRedis: true });
+    const rateLimiter = loadRateLimiter();
     const next = mockNext();
 
     await rateLimiter(mockReq("10.10.0.1"), mockRes(), next);
@@ -74,7 +87,7 @@ describe("rateLimiter middleware", () => {
     process.env.REDIS_URL = "";
     process.env.RATE_LIMIT_MAX_REQUESTS = "1";
 
-    const rateLimiter = loadRateLimiter({ resetRedis: true });
+    const rateLimiter = loadRateLimiter();
     const req = mockReq("10.10.0.2");
     const next1 = mockNext();
     const next2 = mockNext();
@@ -93,7 +106,7 @@ describe("rateLimiter middleware", () => {
   it("uses redis strategy and sets expiration on first hit", async () => {
     process.env.REDIS_URL = originalRedisUrl || "redis://localhost:6379";
 
-    const rateLimiter = loadRateLimiter({ resetRedis: true });
+    const rateLimiter = loadRateLimiter();
     const { redisClient } = loadRedisConfig();
 
     const ip = `10.10.0.3-${Date.now()}`;
@@ -114,7 +127,7 @@ describe("rateLimiter middleware", () => {
   it("falls back to memory when redis throws and still allows within limit", async () => {
     process.env.REDIS_URL = originalRedisUrl || "redis://localhost:6379";
 
-    const rateLimiter = loadRateLimiter({ resetRedis: true });
+    const rateLimiter = loadRateLimiter();
     const { redisClient } = loadRedisConfig();
     vi.spyOn(redisClient, "incr").mockRejectedValue(new Error("redis down"));
     const next = mockNext();

@@ -1,4 +1,4 @@
-const AppError = require("./AppError");
+const AppError = require("./AppError.ts");
 
 class UnauthorizedError extends AppError {
   constructor(message = "unauthorized") {

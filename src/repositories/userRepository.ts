@@ -1,4 +1,4 @@
-const prisma = require("../config/prisma");
+const prisma = require("../config/prisma.ts");
 
 class UserRepository {
   async findByEmail(email) {

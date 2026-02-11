@@ -2,9 +2,9 @@ const { createHash } = require("node:crypto");
 
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const userRepository = require("../../src/repositories/userRepository");
-const refreshTokenRepository = require("../../src/repositories/refreshTokenRepository");
-const authService = require("../../src/services/authService");
+const userRepository = require("../../src/repositories/userRepository.ts");
+const refreshTokenRepository = require("../../src/repositories/refreshTokenRepository.ts");
+const authService = require("../../src/services/authService.ts");
 
 const hashToken = (token) => createHash("sha256").update(token).digest("hex");
 

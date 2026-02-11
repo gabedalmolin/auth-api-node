@@ -7,18 +7,18 @@ const {
   sessions,
   logoutSession,
   logoutAll,
-} = require("../controllers/authController");
+} = require("../controllers/authController.ts");
 
-const authMiddleware = require("../middlewares/authMiddleware");
-const validate = require("../middlewares/validate");
+const authMiddleware = require("../middlewares/authMiddleware.ts");
+const validate = require("../middlewares/validate.ts");
 const {
   registerSchema,
   loginSchema,
   refreshSchema,
   logoutSchema,
   logoutSessionSchema,
-} = require("../validators/authSchemas");
-const rateLimiter = require("../middlewares/rateLimiter");
+} = require("../validators/authSchemas.ts");
+const rateLimiter = require("../middlewares/rateLimiter.ts");
 
 const router = express.Router();
 
