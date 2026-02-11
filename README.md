@@ -2,157 +2,102 @@
 
 ![CI](https://github.com/john-dalmolin/auth-api-node/actions/workflows/ci.yml/badge.svg)
 
-API de autenticação com foco em qualidade de engenharia para ambiente real: arquitetura em camadas, observabilidade, documentação OpenAPI, testes automatizados e pipeline de CI com banco real.
+API de autenticação e gestão de sessão construída com foco em padrões de engenharia de software para produção: arquitetura em camadas, rastreabilidade de requisições, documentação OpenAPI, testes automatizados e CI com banco/redis reais.
 
-## Resumo
+## Visão do projeto
 
-Este projeto implementa autenticação baseada em JWT com refresh token persistido no PostgreSQL, separando responsabilidades por camada (`routes -> controllers -> services -> repositories`).
+Este repositório foi evoluído como base de estudo e portfólio técnico para demonstrar decisões de backend além do CRUD.
 
-O objetivo é manter uma base pronta para evolução, priorizando:
+Escopo principal:
 
-- legibilidade e manutenibilidade;
-- previsibilidade de erro;
-- segurança de sessão;
-- cobertura de testes e automação.
+- autenticação com `accessToken` + `refreshToken` com rotação;
+- revogação de sessão por token e por usuário;
+- validação e tratamento de erros consistentes;
+- observabilidade mínima para operação real;
+- qualidade contínua com lint, cobertura e CI.
+
+## Snapshot de maturidade (fev/2026)
+
+- `16/16` suítes passando
+- `104/104` testes passando
+- cobertura global: `99.2%` (branches `99.2%`)
+- `src/config` e `src/middlewares` com `100%` de branch coverage
+- CI do GitHub Actions estável em `main`
 
 ## Stack
 
 - Node.js 20 LTS
 - Express 5
+- TypeScript 7
 - Prisma 7 + PostgreSQL
+- Redis (ioredis)
 - JWT (`jsonwebtoken`) + `bcryptjs`
-- Zod (validação de payload)
-- Pino (logging estruturado)
-- Vitest + Supertest (execução)
-- Jest (cobertura)
-- Lint/format com Biome
+- Zod para validação de payload
+- Pino para logging estruturado
+- Vitest + Jest + Supertest
+- Biome (lint/format)
 - Swagger UI + swagger-jsdoc
-- ioredis
 
 ## Arquitetura
 
-### Camadas
+Padrão em camadas:
 
-- `routes`: define endpoints e composição de middlewares.
-- `controllers`: valida entrada e delega regra de negócio.
-- `services`: concentra regras de domínio de autenticação.
-- `repositories`: encapsula acesso ao Prisma/Postgres.
+- `routes`: contrato HTTP e composição de middlewares
+- `controllers`: orquestração de entrada/saída
+- `services`: regras de negócio
+- `repositories`: persistência e consultas
 
-### Middlewares principais
+Middlewares críticos:
 
-- `authMiddleware`: valida access token.
-- `validate`: aplica schemas Zod e padroniza resposta de erro de payload.
-- `errorHandler`: centraliza mapeamento de erros de domínio/infra.
-- `requestId` + `logger`: correlação e rastreabilidade por requisição.
-- `rateLimiter`: proteção inicial para endpoints de auth.
+- `requestId`: correlação de requisição
+- `logger`: log estruturado com contexto
+- `validate`: validação de entrada com Zod
+- `authMiddleware`: proteção de rotas com JWT
+- `rateLimiter`: proteção anti-abuso com Redis + fallback memória
+- `errorHandler`: resposta de erro unificada
 
 ## Fluxo de autenticação
 
 1. `POST /auth/register` cria usuário com senha hasheada.
-2. `POST /auth/login` valida credenciais e emite `accessToken` + `refreshToken`.
-3. `POST /auth/refresh` valida token de refresh e rotaciona sessão.
-4. `POST /auth/logout` revoga refresh token ativo.
-5. Rotas protegidas (`/auth/profile`, `/users/me`) aceitam apenas access token válido.
+2. `POST /auth/login` valida credenciais e retorna `accessToken` + `refreshToken`.
+3. `POST /auth/refresh` valida refresh token, revoga o antigo e emite novo par.
+4. `POST /auth/logout` revoga refresh token atual.
+5. `POST /auth/logout-session` e `POST /auth/logout-all` encerram sessões específicas ou todas.
 
-## Diagramas de fluxo
+## Segurança e confiabilidade implementadas
 
-### Fluxo geral da requisição
+- refresh token persistido com hash (`tokenHash`) no banco
+- rotação por `jti` com revogação explícita
+- validação de segredo JWT no startup (fail fast)
+- tratamento centralizado de erro com `AppError`
+- rate limit em endpoints sensíveis
+- logs de aplicação ajustados para reduzir ruído em ambiente de teste
+- encerramento adequado de conexões de teste para evitar open handles
 
-```mermaid
-flowchart TD
-    A["Client (App, Swagger, curl)"] --> B["Express App"]
-    B --> C["requestId middleware"]
-    C --> D["logger middleware"]
-    D --> E{"Route match"}
+## Progresso técnico recente
 
-    E -->|"/auth/*"| F["rateLimiter"]
-    F --> G["validate (Zod)"]
-    G --> H["authController"]
-    H --> I["authService"]
-    I --> J["Repositories"]
-    J --> K["Prisma Client"]
-    K --> L["PostgreSQL"]
+Últimas entregas relevantes em `main`:
 
-    E -->|"/auth/profile, /users/me"| M["authMiddleware (Bearer JWT)"]
-    M --> N["Protected handlers"]
-    N --> O["200 JSON response"]
+- `#14` estabilidade de runtime de testes (teardown Prisma)
+- `#15` aumento de branch coverage em fluxos de auth/rate limiter
+- `#16` redução de ruído de logs em execução de teste
+- `#18` cobertura completa de branches em `src/config/prisma.ts`
+- `#19` cobertura completa de branches em `src/logger.ts`
+- `#20` cobertura completa de branches em `validate.ts` e `errorHandler.ts`
 
-    E -->|"/health, /ready"| P["healthController"]
-    E -->|"/docs, /docs.json"| Q["docsRoutes (Swagger)"]
+## Backlog atual
 
-    H -. "AppError / runtime error" .-> R["errorHandler middleware"]
-    I -. "AppError / runtime error" .-> R
-    R --> S["JSON error response"]
-```
+As próximas tasks técnicas estão em `to-do.txt`, separando entregas concluídas de próximos incrementos de engenharia.
 
-### Fluxo de autenticação e rotação de refresh token
+## Setup local
 
-```mermaid
-sequenceDiagram
-    participant U as "User"
-    participant API as "Auth API"
-    participant SVC as "authService"
-    participant DB as "PostgreSQL (RefreshToken)"
-
-    U->>API: "POST /auth/login (email, password)"
-    API->>SVC: "login()"
-    SVC->>DB: "create(tokenHash, jti, userId, expiresAt)"
-    SVC-->>API: "accessToken + refreshToken"
-    API-->>U: "200 tokens"
-
-    U->>API: "POST /auth/refresh (refreshToken)"
-    API->>SVC: "refreshToken(token)"
-    SVC->>SVC: "jwt.verify + hashToken"
-    SVC->>DB: "findByJti(jti)"
-    SVC->>DB: "revokeByJti(oldJti)"
-    SVC->>DB: "create(newTokenHash, newJti, userId, expiresAt)"
-    SVC-->>API: "new accessToken + new refreshToken"
-    API-->>U: "200 rotated tokens"
-
-    U->>API: "POST /auth/logout (refreshToken)"
-    API->>SVC: "logout(token)"
-    SVC->>DB: "findByJti(jti)"
-    SVC->>DB: "revokeByJti(jti)"
-    API-->>U: "200 logged out"
-```
-
-## Segurança e qualidade
-
-### Pré-requisitos
+Pré-requisitos:
 
 - Docker + Docker Compose
 - Node.js 20 LTS
 - npm
 
-### Implementado
-
-- [X] Segredo JWT validado no startup (falha rápida).
-- [X] Refresh token com `jti` único para rotação/revogação.
-- [X] Persistência de refresh token com hash (`tokenHash`) no banco.
-- [X] Tratamento de erro unificado com `AppError`.
-- [X] Validação de payload com Zod.
-- [X] Rate limiting nas rotas de autenticação (Redis com fallback em memória).
-- [X] Session management (`GET /auth/sessions`, `POST /auth/logout-session`, `POST /auth/logout-all`).
-- [X] Migração para TypeScript (Fase 1) no core da aplicação e testes principais.
-- [X] Testes automatizados em múltiplas camadas.
-- [X] CI com execução de testes e cobertura mínima.
-- [X] Lint/format com Biome padronizados.
-- [X] Cobertura estável via Jest (`npm run test:coverage`).
-- [X] Investigação de open handles concluída com `--detectOpenHandles` (issue #6).
-
-### Em andamento
-
-- [ ] Concluir migração dos arquivos remanescentes de setup de teste (`tests/*.js` / `tests/*.mjs`) ou documentar decisão de manter como estão.
-- [ ] Aumentar cobertura de branches em fluxos de erro críticos.
-- [ ] Refinar observabilidade de falhas críticas de autenticação/sessão.
-
-### Próximos passos
-
-- [ ] Mapear e reduzir warnings de runtime de dependências (`DEP0169` em `swagger-jsdoc` e `--localstorage-file` no teardown do Jest).
-- [ ] Fortalecer testes para cenários de falha em integrações externas (Redis/DB).
-- [ ] Documentar estratégia final de testes: Vitest para execução, Jest para cobertura.
-
-## Setup local
+Subir infraestrutura e aplicação:
 
 ```bash
 docker-compose up -d postgres redis
@@ -160,7 +105,7 @@ npm install
 npm run dev
 ```
 
-Crie o arquivo `.env` na raiz:
+Arquivo `.env`:
 
 ```env
 DATABASE_URL="postgresql://auth_user:auth_password@localhost:5432/auth_api"
@@ -171,79 +116,47 @@ RATE_LIMIT_WINDOW_MS=60000
 RATE_LIMIT_MAX_REQUESTS=100
 ```
 
-Para testes, o projeto usa `tests/.env.test`.
+Para testes, usar `tests/.env.test`.
 
-## Scripts úteis
+## Scripts principais
 
-- `npm run dev`: sobe a API com `nodemon`.
-- `npm run start`: inicia em modo produção.
-- `npm run lint`: valida padrão de código.
-- `npm run lint:fix`: corrige problemas de lint automaticamente.
-- `npm run format`: verifica formatação.
-- `npm run format:write`: aplica formatação.
-- `npm test`: roda suíte completa (Vitest).
-- `npm run test:vitest`: roda suíte completa explicitamente com Vitest.
-- `npm run test:coverage`: roda cobertura estável via Jest.
-- `npm run test:coverage:jest`: alias explícito da cobertura via Jest.
-- `npm run test:coverage:vitest`: opção experimental de cobertura via Vitest.
-- `npm run test:vitest:coverage`: alias de compatibilidade (aponta para Jest).
-- `npm run test:jest:coverage`: alias de compatibilidade (aponta para Jest).
+- `npm run dev`: desenvolvimento com watch
+- `npm run start`: execução da API
+- `npm run lint`: lint com Biome
+- `npm run format`: valida formatação
+- `npm test`: suíte principal (Vitest)
+- `npm run test:coverage:jest`: cobertura com Jest
+- `npm run typecheck`: verificação de tipos
 
-## Testes e cobertura
+## Endpoints principais
 
-A suíte inclui:
+- `POST /auth/register`
+- `POST /auth/login`
+- `POST /auth/refresh`
+- `POST /auth/logout`
+- `GET /auth/profile`
+- `GET /users/me`
+- `GET /auth/sessions`
+- `POST /auth/logout-session`
+- `POST /auth/logout-all`
+- `GET /health`
+- `GET /ready`
+- `GET /docs`
+- `GET /docs.json`
 
-- testes e2e de autenticação e rotas protegidas;
-- testes de middleware de autenticação;
-- testes de repositório de refresh token;
-- testes unitários de `AuthService`.
+## Roadmap técnico
 
-Notas importantes:
+### Próximo ciclo
 
-- `pretest`, `pretest:coverage` e scripts de cobertura (`pretest:coverage:jest` / `pretest:coverage:vitest`) executam `prisma migrate reset --force && prisma generate` para garantir ambiente reproduzível.
-- Thresholds de cobertura estão definidos em `jest.config.cjs`.
-- Issue #6 investigada; cobertura em Jest não está travando encerramento, warnings atuais são de dependências.
+- ampliar testes de falhas de infraestrutura (Redis/DB indisponível)
+- consolidar decisão final Vitest x Jest para cobertura
+- expandir regras de sessão por dispositivo (metadata mais rica)
 
-## Endpoints
+### Evolução futura
 
-- `POST /auth/register`: cria usuário.
-- `POST /auth/login`: autentica e retorna tokens.
-- `POST /auth/refresh`: renova sessão.
-- `POST /auth/logout`: revoga refresh token.
-- `GET /auth/profile`: rota protegida de perfil.
-- `GET /users/me`: rota protegida de usuário autenticado.
-- `GET /health`: liveness.
-- `GET /ready`: readiness com verificação de banco.
-- `GET /docs`: Swagger UI.
-- `GET /docs.json`: OpenAPI em JSON.
-- `GET /auth/sessions`: listar sessões ativas do usuário autenticado.
-- `POST /auth/logout-session`: revogar uma sessão específica por `jti`.
-- `POST /auth/logout-all`: revogar todas as sessões do usuário autenticado.
-
-## Validação manual (curl)
-
-Registrar usuário:
-
-```bash
-curl -X POST http://localhost:3000/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"name":"John","email":"john@test.com","password":"123456"}'
-```
-
-Login:
-
-```bash
-curl -X POST http://localhost:3000/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"john@test.com","password":"123456"}'
-```
-
-Rota protegida:
-
-```bash
-curl http://localhost:3000/users/me \
-  -H "Authorization: Bearer <access_token>"
-```
+- endurecimento de segurança (revisão de dependências e policy de segredo)
+- maior observabilidade (métricas e tracing)
+- preparo para cenário multi-instância com limites distribuídos avançados
 
 ## Estrutura de pastas
 
@@ -278,43 +191,3 @@ tests/
 - jest.globals.js
 - vitest.setup.mjs
 ```
-
-## CI
-
-Workflow em `.github/workflows/ci.yml`:
-
-- provisiona PostgreSQL no GitHub Actions;
-- provisiona Redis no GitHub Actions;
-- instala dependências;
-- executa testes com cobertura;
-- falha o pipeline se thresholds mínimos não forem atendidos.
-
-## Decisões e trade-offs
-
-- Refresh token em banco aumenta controle de sessão, com custo de estado adicional.
-- Access token curto reduz impacto de comprometimento, com maior frequência de refresh.
-- Camadas explícitas aumentam legibilidade e testabilidade, com mais arquivos e disciplina arquitetural.
-- Reset de banco no pretest aumenta previsibilidade, com custo de tempo em execução local/CI.
-
-## Roadmap técnico
-
-### Segurança
-
-- Revogação por usuário/dispositivo.
-- Rotina de revisão de dependências e vulnerabilidades.
-
-### Confiabilidade
-
-- Cobrir cenários negativos e de erro de infra.
-- Refinar observabilidade de falhas críticas.
-
-### Escalabilidade
-
-- Evoluir rate limit Redis para operação distribuída avançada.
-- Preparar comportamento para múltiplas instâncias.
-
-### Evolução de base de código
-
-- Consolidar migração TS nos artefatos remanescentes de setup/teste.
-- Após estabilizar totalmente a base em TS, avaliar extração de casos de uso em classes (Fase 2).
-- Manter compatibilidade total com pipeline CI durante a evolução.
