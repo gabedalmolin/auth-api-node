@@ -103,6 +103,25 @@ describe("rateLimiter middleware", () => {
     expect(err.code).toBe("TOO_MANY_REQUESTS");
   });
 
+  it("resets memory bucket after window expiry", async () => {
+    process.env.REDIS_URL = "";
+    process.env.RATE_LIMIT_MAX_REQUESTS = "1";
+    process.env.RATE_LIMIT_WINDOW_MS = "1000";
+
+    const rateLimiter = loadRateLimiter();
+    const req = mockReq("10.10.0.22");
+    const next1 = mockNext();
+    const next2 = mockNext();
+
+    vi.spyOn(Date, "now").mockReturnValueOnce(0).mockReturnValueOnce(1001);
+
+    await rateLimiter(req, mockRes(), next1);
+    await rateLimiter(req, mockRes(), next2);
+
+    expect(next1).toHaveBeenCalledWith();
+    expect(next2).toHaveBeenCalledWith();
+  });
+
   it("uses redis strategy and sets expiration on first hit", async () => {
     process.env.REDIS_URL = originalRedisUrl || "redis://localhost:6379";
 
@@ -135,5 +154,27 @@ describe("rateLimiter middleware", () => {
     await rateLimiter(mockReq("10.10.0.4"), mockRes(), next);
 
     expect(next).toHaveBeenCalledWith();
+  });
+
+  it("blocks when redis fails and memory fallback exceeds limit", async () => {
+    process.env.REDIS_URL = originalRedisUrl || "redis://localhost:6379";
+    process.env.RATE_LIMIT_MAX_REQUESTS = "1";
+
+    const rateLimiter = loadRateLimiter();
+    const { redisClient } = loadRedisConfig();
+    vi.spyOn(redisClient, "incr").mockRejectedValue(new Error("redis down"));
+
+    const req = mockReq("10.10.0.44");
+    const next1 = mockNext();
+    const next2 = mockNext();
+
+    await rateLimiter(req, mockRes(), next1);
+    await rateLimiter(req, mockRes(), next2);
+
+    const err = next2.mock.calls[0][0];
+    expect(err).toBeTruthy();
+    expect(err.message).toBe("too many requests");
+    expect(err.statusCode).toBe(429);
+    expect(err.code).toBe("TOO_MANY_REQUESTS");
   });
 });

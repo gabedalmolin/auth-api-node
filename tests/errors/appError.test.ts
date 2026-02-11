@@ -29,6 +29,14 @@ describe("Error classes", () => {
     expect(err.message).toBe("already exists");
   });
 
+  it("ConflictError usa mensagem default", () => {
+    const err = new ConflictError();
+
+    expect(err).toBeInstanceOf(AppError);
+    expect(err.statusCode).toBe(409);
+    expect(err.message).toBe("conflict");
+  });
+
   it("UnauthorizedError usa status 401", () => {
     const err = new UnauthorizedError();
 
