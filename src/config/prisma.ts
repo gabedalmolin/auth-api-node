@@ -3,8 +3,9 @@ const { PrismaPg } = require("@prisma/adapter-pg");
 const { Pool } = require("pg");
 
 const path = process.env.NODE_ENV === "test" ? "tests/.env.test" : ".env";
-require("dotenv").config({ path, override: false });
+require("dotenv").config({ path, override: false, quiet: true });
 
+const prismaLog = process.env.NODE_ENV === "test" ? [] : ["error", "warn"];
 const globalForPrisma = globalThis;
 
 if (!globalForPrisma.__authApiPool) {
@@ -16,7 +17,7 @@ if (!globalForPrisma.__authApiPool) {
 if (!globalForPrisma.__authApiPrisma) {
   globalForPrisma.__authApiPrisma = new PrismaClient({
     adapter: new PrismaPg(globalForPrisma.__authApiPool),
-    log: ["error", "warn"],
+    log: prismaLog,
   });
 }
 
