@@ -93,7 +93,7 @@ class AuthService {
       throw new AppError("invalid refresh token", 400, "INVALID_REFRESH_TOKEN");
     }
 
-    let decoded;
+    let decoded = null;
     try {
       decoded = jwt.verify(token, authConfig.jwt.secret);
     } catch {
@@ -154,7 +154,7 @@ class AuthService {
       throw new AppError("invalid refresh token", 400, "INVALID_REFRESH_TOKEN");
     }
 
-    let decoded;
+    let decoded = null;
     try {
       decoded = jwt.verify(token, authConfig.jwt.secret);
     } catch {
