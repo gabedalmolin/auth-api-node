@@ -118,6 +118,12 @@ sequenceDiagram
 
 ## Segurança e qualidade
 
+### Pré-requisitos
+
+- Docker + Docker Compose
+- Node.js 18+
+- npm
+
 ### Implementado
 
 - [X] Segredo JWT validado no startup (falha rápida).
@@ -127,29 +133,24 @@ sequenceDiagram
 - [X] Validação de payload com Zod.
 - [X] Rate limiting nas rotas de autenticação (Redis com fallback em memória).
 - [X] Session management (`GET /auth/sessions`, `POST /auth/logout-session`, `POST /auth/logout-all`).
+- [X] Migração para TypeScript (Fase 1) no core da aplicação e testes principais.
 - [X] Testes automatizados em múltiplas camadas.
 - [X] CI com execução de testes e cobertura mínima.
 - [X] Lint/format com Biome padronizados.
+- [X] Cobertura estável via Jest (`npm run test:coverage`).
+- [X] Investigação de open handles concluída com `--detectOpenHandles` (issue #6).
 
 ### Em andamento
 
-- [ ] Migração para TypeScript (Fase 1) sem alterar arquitetura.
-- [ ] Configurar `tsconfig` e regras do Biome para arquivos `.ts`.
-- [ ] Converter `src` de `.js` para `.ts`.
-- [ ] Converter `tests` de `.js` para `.ts`.
-- [ ] Garantir `lint`, `test` e `test:coverage` verdes local e CI.
-
-### Próximos passos
-
-- [ ] Resolver warning de open handles ao rodar cobertura (`jest --coverage`).
+- [ ] Concluir migração dos arquivos remanescentes de setup de teste (`tests/*.js` / `tests/*.mjs`) ou documentar decisão de manter como estão.
 - [ ] Aumentar cobertura de branches em fluxos de erro críticos.
 - [ ] Refinar observabilidade de falhas críticas de autenticação/sessão.
 
-## Pré-requisitos
+### Próximos passos
 
-- Docker + Docker Compose
-- Node.js 18+
-- npm
+- [ ] Mapear e reduzir warnings de runtime de dependências (`DEP0169` em `swagger-jsdoc` e `--localstorage-file` no teardown do Jest).
+- [ ] Fortalecer testes para cenários de falha em integrações externas (Redis/DB).
+- [ ] Documentar estratégia final de testes: Vitest para execução, Jest para cobertura.
 
 ## Setup local
 
@@ -183,7 +184,10 @@ Para testes, o projeto usa `tests/.env.test`.
 - `npm test`: roda suíte completa (Vitest).
 - `npm run test:vitest`: roda suíte completa explicitamente com Vitest.
 - `npm run test:coverage`: roda cobertura estável via Jest.
+- `npm run test:coverage:jest`: alias explícito da cobertura via Jest.
 - `npm run test:coverage:vitest`: opção experimental de cobertura via Vitest.
+- `npm run test:vitest:coverage`: alias de compatibilidade (aponta para Jest).
+- `npm run test:jest:coverage`: alias de compatibilidade (aponta para Jest).
 
 ## Testes e cobertura
 
@@ -198,6 +202,7 @@ Notas importantes:
 
 - `pretest`, `pretest:coverage` e scripts de cobertura (`pretest:coverage:jest` / `pretest:coverage:vitest`) executam `prisma migrate reset --force && prisma generate` para garantir ambiente reproduzível.
 - Thresholds de cobertura estão definidos em `jest.config.cjs`.
+- Issue #6 investigada; cobertura em Jest não está travando encerramento, warnings atuais são de dependências.
 
 ## Endpoints
 
@@ -244,9 +249,9 @@ curl http://localhost:3000/users/me \
 
 ```txt
 src/
-- app.js
-- server.js
-- logger.js
+- app.ts
+- server.ts
+- logger.ts
 - config/
 - controllers/
 - docs/
@@ -262,8 +267,8 @@ prisma/
 - migrations/
 
 tests/
-- auth.e2e.test.js
-- health.e2e.test.js
+- auth.e2e.test.ts
+- health.e2e.test.ts
 - middleware/
 - config/
 - repositories/
@@ -271,6 +276,7 @@ tests/
 - setup.js
 - jest.env.js
 - jest.globals.js
+- vitest.setup.mjs
 ```
 
 ## CI
@@ -279,7 +285,7 @@ Workflow em `.github/workflows/ci.yml`:
 
 - provisiona PostgreSQL no GitHub Actions;
 - provisiona Redis no GitHub Actions;
-- instala dependências.
+- instala dependências;
 - executa testes com cobertura;
 - falha o pipeline se thresholds mínimos não forem atendidos.
 
@@ -309,6 +315,6 @@ Workflow em `.github/workflows/ci.yml`:
 
 ### Evolução de base de código
 
-- Migrar para TypeScript de forma incremental (Fase 1 sem refactor estrutural).
-- Após estabilizar TS, avaliar extração de casos de uso em classes (Fase 2).
-- Manter compatibilidade total com pipeline CI durante a migração.
+- Consolidar migração TS nos artefatos remanescentes de setup/teste.
+- Após estabilizar totalmente a base em TS, avaliar extração de casos de uso em classes (Fase 2).
+- Manter compatibilidade total com pipeline CI durante a evolução.
