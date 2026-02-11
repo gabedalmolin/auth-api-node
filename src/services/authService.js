@@ -1,7 +1,7 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { randomUUID, createHash, timingSafeEqual } = require("node:crypto");
-const authConfig = require("../config/auth");
+const authConfig = require("../config/auth.ts");
 const userRepository = require("../repositories/userRepository");
 const refreshTokenRepository = require("../repositories/refreshTokenRepository");
 const AppError = require("../errors/AppError");

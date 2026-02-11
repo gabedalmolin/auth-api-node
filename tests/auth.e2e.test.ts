@@ -15,7 +15,7 @@ const jwt = require("jsonwebtoken");
 
 const app = require("../src/app.ts");
 const prisma = require("../src/config/prisma");
-const authConfig = require("../src/config/auth");
+const authConfig = require("../src/config/auth.ts");
 
 //  Limpa o banco antes de CADA teste
 beforeEach(async () => {
