@@ -41,8 +41,8 @@ async function refresh(req, res, next) {
       return res.status(400).json({ error: "refresh token required" });
     }
 
-    const newToken = await authService.refreshToken(refreshToken);
-    return res.status(200).json({ token: newToken });
+    const tokens = await authService.refreshToken(refreshToken);
+    return res.status(200).json(tokens);
   } catch (err) {
     return next(err);
   }
