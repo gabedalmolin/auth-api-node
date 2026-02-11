@@ -177,4 +177,40 @@ describe("rateLimiter middleware", () => {
     expect(err.statusCode).toBe(429);
     expect(err.code).toBe("TOO_MANY_REQUESTS");
   });
+  it("usa defaults de RATE_LIMIT_* quando env não está definido", async () => {
+    process.env.REDIS_URL = "";
+    delete process.env.RATE_LIMIT_WINDOW_MS;
+    delete process.env.RATE_LIMIT_MAX_REQUESTS;
+
+    const rateLimiter = loadRateLimiter();
+    const req = mockReq("10.10.0.99");
+
+    // default maxRequests = 100 => 101a chamada deve bloquear
+    let lastNext = mockNext();
+    for (let i = 0; i < 101; i += 1) {
+      lastNext = mockNext();
+      await rateLimiter(req, mockRes(), lastNext);
+    }
+
+    const err = lastNext.mock.calls[0][0];
+    expect(err).toBeTruthy();
+    expect(err.code).toBe("TOO_MANY_REQUESTS");
+  });
+
+  it("usa chave global quando req.ip não existe", async () => {
+    process.env.REDIS_URL = "";
+    process.env.RATE_LIMIT_MAX_REQUESTS = "1";
+
+    const rateLimiter = loadRateLimiter();
+    const reqSemIp = {};
+    const next1 = mockNext();
+    const next2 = mockNext();
+
+    await rateLimiter(reqSemIp as never, mockRes(), next1);
+    await rateLimiter(reqSemIp as never, mockRes(), next2);
+
+    const err = next2.mock.calls[0][0];
+    expect(err).toBeTruthy();
+    expect(err.code).toBe("TOO_MANY_REQUESTS");
+  });
 });

@@ -152,4 +152,22 @@ describe("redis config", () => {
     expect(client.disconnect).toHaveBeenCalledTimes(1);
     expect(client.connector.stream.destroy).toHaveBeenCalledTimes(1);
   });
+
+  it("não destrói stream fora de test no forceDisconnect", async () => {
+    const stream = { destroyed: false, destroy: vi.fn() };
+
+    const { redisConfig, client } = loadRedisConfig({
+      redisUrl: "redis://localhost:6379",
+      nodeEnv: "production",
+      clientOverrides: {
+        status: "connecting",
+        connector: { stream },
+      },
+    });
+
+    await redisConfig.closeRedisConnection();
+
+    expect(client.disconnect).toHaveBeenCalledTimes(1);
+    expect(stream.destroy).not.toHaveBeenCalled();
+  });
 });
