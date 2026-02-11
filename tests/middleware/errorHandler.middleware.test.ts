@@ -55,4 +55,15 @@ describe("errorHandler middleware", () => {
     expect(consoleSpy).toHaveBeenCalledTimes(1);
     expect(res.status).toHaveBeenCalledWith(500);
   });
+  it("usa APP_ERROR quando AppError vem sem code", () => {
+    const res = createRes();
+
+    errorHandler(new AppError("conflito", 409, ""), {}, res, vi.fn());
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "conflito",
+      code: "APP_ERROR",
+    });
+  });
 });
