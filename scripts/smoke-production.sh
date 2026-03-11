@@ -97,10 +97,22 @@ if (ready.status !== "ready" || ready.service !== "auth-api") {
 
 node -e '
 const spec = JSON.parse(process.argv[1]);
+const expectedBaseUrl = process.argv[2].replace(/\/+$/, "");
 if (!spec.openapi || !spec.paths || Object.keys(spec.paths).length === 0) {
   console.error("Unexpected /docs.json payload");
   process.exit(1);
 }
-' "$docs_payload"
+
+const serverUrls = Array.isArray(spec.servers)
+  ? spec.servers
+      .map((server) => String(server?.url ?? "").replace(/\/+$/, ""))
+      .filter(Boolean)
+  : [];
+
+if (serverUrls[0] !== expectedBaseUrl) {
+  console.error("Unexpected /docs.json server list", serverUrls);
+  process.exit(1);
+}
+' "$docs_payload" "${base_url%/}"
 
 echo "Smoke validation passed for ${base_url}"
