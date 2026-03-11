@@ -1,10 +1,47 @@
 # Auth API
 
 ![CI](https://github.com/gabedalmolin/auth-api-node/actions/workflows/ci.yml/badge.svg)
+[![Release](https://img.shields.io/github/v/release/gabedalmolin/auth-api-node?display_name=tag)](https://github.com/gabedalmolin/auth-api-node/releases/tag/v1.0.0)
 
 Production-grade authentication API built with **Express 5**, **TypeScript**, **Prisma/PostgreSQL**, and **Redis**.
 
-This codebase is intentionally focused on **core authentication and session integrity**, not on identity-platform breadth. The goal is to model how a real backend auth service should be structured when correctness, operability, and change safety matter.
+This project models what a **production-grade core auth service** looks like when session lifecycle, replay resistance, operational safety, and change discipline are treated as first-class concerns.
+
+It is intentionally focused on **authentication depth**, not identity-platform breadth. The goal is to show how a serious backend service should be designed when correctness, observability, and maintainability matter more than feature count.
+
+## Why this project matters
+
+Many portfolio auth APIs stop at registration, login, and a basic JWT flow. This one goes further by modelling the production concerns that usually decide whether an auth service is trustworthy in practice:
+
+- first-class server-side sessions
+- refresh-token rotation with replay detection
+- explicit session revocation and compromise handling
+- contract-driven API documentation
+- split quality and integration gates in CI
+
+## Engineering highlights
+
+- First-class `Session` records with public `sessionId` identifiers instead of exposing token internals.
+- Chain-aware refresh-token rotation that detects replay and marks compromised sessions inactive.
+- Strict JWT validation with separate access and refresh secrets, enforced issuer, audience, and token type.
+- Contract-driven OpenAPI output, typed environment validation, and infrastructure-backed integration tests in GitHub Actions.
+- Redis-backed rate limiting with in-memory fail-soft behaviour and structured request correlation.
+
+## Auth lifecycle at a glance
+
+```mermaid
+flowchart LR
+    A["POST /v1/auth/sessions"] --> B["Create session record"]
+    B --> C["Issue access token + refresh token"]
+    C --> D["GET /v1/auth/me"]
+    C --> E["POST /v1/auth/tokens/refresh"]
+    E --> F["Rotate refresh token"]
+    F --> G["Invalidate previous token in chain"]
+    G --> H{"Refresh token replayed?"}
+    H -- "No" --> C
+    H -- "Yes" --> I["Mark session compromised"]
+    I --> J["Reject protected requests"]
+```
 
 ## Overview
 
