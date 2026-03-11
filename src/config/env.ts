@@ -57,6 +57,7 @@ const envSchema = z.object({
     .optional(),
   TRUST_PROXY: z.coerce.number().int().min(0).default(0),
   DOCS_ENABLED: booleanFromEnv.default(true),
+  METRICS_ENABLED: booleanFromEnv.default(false),
   BCRYPT_ROUNDS: z.coerce.number().int().min(8).max(15).default(10),
 });
 

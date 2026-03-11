@@ -7,6 +7,7 @@ import tokenService, { hashToken, isSameHash } from "./tokenService";
 import userRepository from "../repositories/userRepository";
 import sessionRepository from "../repositories/sessionRepository";
 import refreshTokenRepository from "../repositories/refreshTokenRepository";
+import { authMetrics } from "../metrics/authMetrics";
 
 type RequestContext = {
   correlationId: string;
@@ -139,6 +140,8 @@ class AuthService {
     await sessionRepository.markCompromised(sessionId, compromisedAt);
     await refreshTokenRepository.markReused(tokenId, compromisedAt);
     await refreshTokenRepository.revokeActiveBySessionId(sessionId, compromisedAt);
+    authMetrics.recordRefresh("replay_detected");
+    authMetrics.recordRefreshReplay();
 
     this.audit("auth.refresh.reuse_detected", context, { sessionId, tokenId });
 
@@ -188,6 +191,7 @@ class AuthService {
     const user = await userRepository.findByEmail(normalizedEmail);
 
     if (!user) {
+      authMetrics.recordLogin("invalid_credentials");
       this.audit("auth.login.failed", context, { email: normalizedEmail });
       throw new AppError({
         message: "invalid credentials",
@@ -198,6 +202,7 @@ class AuthService {
 
     const passwordMatches = await passwordHasher.verify(password, user.passwordHash);
     if (!passwordMatches) {
+      authMetrics.recordLogin("invalid_credentials");
       this.audit("auth.login.failed", context, { email: normalizedEmail, userId: user.id });
       throw new AppError({
         message: "invalid credentials",
@@ -213,6 +218,7 @@ class AuthService {
     });
 
     const tokens = await this.createTokenPair(user.id, session.id);
+    authMetrics.recordLogin("success");
 
     this.audit("auth.login.succeeded", context, {
       userId: user.id,
@@ -232,6 +238,7 @@ class AuthService {
     const storedToken = await refreshTokenRepository.findByJti(identity.tokenJti);
 
     if (!storedToken || storedToken.sessionId !== identity.sessionId) {
+      authMetrics.recordRefresh("invalid_token");
       throw new AppError({
         message: "invalid refresh token",
         code: "INVALID_REFRESH_TOKEN",
@@ -241,6 +248,7 @@ class AuthService {
 
     const session = await sessionRepository.findByIdWithUser(identity.sessionId);
     if (!session || session.userId !== identity.userId) {
+      authMetrics.recordRefresh("invalid_token");
       throw new AppError({
         message: "invalid refresh token",
         code: "INVALID_REFRESH_TOKEN",
@@ -249,6 +257,7 @@ class AuthService {
     }
 
     if (session.status === SessionStatus.COMPROMISED) {
+      authMetrics.recordRefresh("session_compromised");
       throw new AppError({
         message: "session compromised",
         code: "SESSION_COMPROMISED",
@@ -257,6 +266,7 @@ class AuthService {
     }
 
     if (session.status !== SessionStatus.ACTIVE) {
+      authMetrics.recordRefresh("session_revoked");
       throw new AppError({
         message: "session revoked",
         code: "SESSION_REVOKED",
@@ -269,6 +279,7 @@ class AuthService {
     }
 
     if (storedToken.expiresAt <= new Date()) {
+      authMetrics.recordRefresh("expired");
       throw new AppError({
         message: "refresh token expired",
         code: "REFRESH_TOKEN_EXPIRED",
@@ -328,6 +339,7 @@ class AuthService {
       userId: identity.userId,
       sessionId: session.id,
     });
+    authMetrics.recordRefresh("success");
 
     return {
       accessToken: tokens.accessToken,

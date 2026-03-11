@@ -5,6 +5,10 @@ const { queryRaw, pingRedis } = vi.hoisted(() => ({
   pingRedis: vi.fn(),
 }));
 
+const { recordReadinessFailure } = vi.hoisted(() => ({
+  recordReadinessFailure: vi.fn(),
+}));
+
 vi.mock("../../src/config/prisma", () => ({
   default: {
     $queryRaw: queryRaw,
@@ -13,6 +17,12 @@ vi.mock("../../src/config/prisma", () => ({
 
 vi.mock("../../src/config/redis", () => ({
   pingRedis,
+}));
+
+vi.mock("../../src/metrics/authMetrics", () => ({
+  authMetrics: {
+    recordReadinessFailure,
+  },
 }));
 
 import { health, ready } from "../../src/controllers/healthController";
@@ -57,6 +67,18 @@ describe("healthController", () => {
         dependencies: expect.objectContaining({ database: "up", redis: "up" }),
       }),
     );
+    expect(recordReadinessFailure).not.toHaveBeenCalled();
+  });
+
+  it("returns not_ready when redis is down", async () => {
+    queryRaw.mockResolvedValue([1]);
+    pingRedis.mockResolvedValue("down");
+    const response = createResponse();
+
+    await ready({} as never, response as never);
+
+    expect(response.status).toHaveBeenCalledWith(503);
+    expect(recordReadinessFailure).toHaveBeenCalledWith("redis");
   });
 
   it("returns not_ready when database query fails", async () => {
@@ -69,5 +91,6 @@ describe("healthController", () => {
     expect(response.json).toHaveBeenCalledWith(
       expect.objectContaining({ status: "not_ready" }),
     );
+    expect(recordReadinessFailure).toHaveBeenCalledWith("database");
   });
 });

@@ -26,6 +26,7 @@ describe("env config", () => {
     expect(env.PORT).toBe(3000);
     expect(env.LOG_LEVEL).toBe("silent");
     expect(env.DOCS_ENABLED).toBe(true);
+    expect(env.METRICS_ENABLED).toBe(false);
   });
 
   it("fails fast when secrets are invalid", async () => {
