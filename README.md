@@ -46,9 +46,9 @@ Many portfolio auth APIs stop at registration, login, and a basic JWT flow. This
 
 Latest benchmark baseline:
 
-- `24.48 req/s` aggregate request throughput
-- `709.97ms` p95 request latency
-- `1023.93ms` p99 request latency
+- `25.01 req/s` aggregate request throughput
+- `684.36ms` p95 request latency
+- `900.44ms` p99 request latency
 - `100%` scenario check pass rate across session and replay flows
 
 ## Repository security posture
