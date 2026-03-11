@@ -27,6 +27,13 @@ Many portfolio auth APIs stop at registration, login, and a basic JWT flow. This
 - Contract-driven OpenAPI output, typed environment validation, and infrastructure-backed integration tests in GitHub Actions.
 - Redis-backed rate limiting with in-memory fail-soft behaviour and structured request correlation.
 
+## Architecture and security notes
+
+- [`docs/adr/0001-session-lifecycle.md`](./docs/adr/0001-session-lifecycle.md)
+- [`docs/adr/0002-refresh-token-rotation.md`](./docs/adr/0002-refresh-token-rotation.md)
+- [`docs/adr/0003-rate-limit-fail-soft.md`](./docs/adr/0003-rate-limit-fail-soft.md)
+- [`docs/threat-model.md`](./docs/threat-model.md)
+
 ## Auth lifecycle at a glance
 
 ```mermaid
