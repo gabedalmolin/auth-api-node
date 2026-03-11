@@ -12,16 +12,32 @@ type SwaggerRequestLike = {
   get(name: string): string | undefined;
 };
 
+const getForwardedHeaderValue = (
+  request: SwaggerRequestLike,
+  name: string,
+): string | undefined => {
+  const value = request.get(name)?.trim();
+
+  if (!value) {
+    return undefined;
+  }
+
+  return value.split(",")[0]?.trim() || undefined;
+};
+
 export const resolveSwaggerBaseUrl = (
   request: SwaggerRequestLike,
 ): string => {
-  const host = request.get("host");
+  const protocol =
+    getForwardedHeaderValue(request, "x-forwarded-proto") ?? request.protocol;
+  const host =
+    getForwardedHeaderValue(request, "x-forwarded-host") ?? request.get("host");
 
   if (!host) {
     return LOCAL_SWAGGER_SERVER.url;
   }
 
-  return `${request.protocol}://${host}`;
+  return `${protocol}://${host}`;
 };
 
 export const buildSwaggerSpec = (baseUrl: string = LOCAL_SWAGGER_SERVER.url) => {

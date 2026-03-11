@@ -43,6 +43,29 @@ describe("swagger spec", () => {
     expect(baseUrl).toBe("https://auth-api-production-a97b.up.railway.app");
   });
 
+  it("prefers forwarded host and proto when present", () => {
+    const baseUrl = resolveSwaggerBaseUrl({
+      protocol: "http",
+      get(header: string) {
+        if (header === "x-forwarded-proto") {
+          return "https, http";
+        }
+
+        if (header === "x-forwarded-host") {
+          return "auth-api-production-a97b.up.railway.app, internal.railway";
+        }
+
+        if (header === "host") {
+          return "internal.railway";
+        }
+
+        return undefined;
+      },
+    });
+
+    expect(baseUrl).toBe("https://auth-api-production-a97b.up.railway.app");
+  });
+
   it("falls back to the local server when the host header is unavailable", () => {
     const baseUrl = resolveSwaggerBaseUrl({
       protocol: "https",
