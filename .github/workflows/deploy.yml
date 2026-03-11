@@ -84,6 +84,8 @@ jobs:
         run: npm install --global @railway/cli@latest
 
       - name: Deploy to Railway
+        env:
+          CI: ""
         run: railway up --project "$RAILWAY_PROJECT_ID" --service "$RAILWAY_SERVICE" --environment "${RAILWAY_ENVIRONMENT:-production}"
 
       - name: Run smoke validation
