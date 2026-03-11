@@ -1,4 +1,4 @@
-import { SessionStatus } from "@prisma/client";
+import { type Prisma, SessionStatus } from "@prisma/client";
 import prisma from "../config/prisma";
 
 type CreateSessionInput = {
@@ -13,6 +13,8 @@ type TouchActivityInput = {
   userAgent: string | null;
   ipAddress: string | null;
 };
+
+type SessionDbClient = Prisma.TransactionClient | typeof prisma;
 
 class SessionRepository {
   async create({ userId, userAgent, ipAddress }: CreateSessionInput) {
@@ -62,8 +64,8 @@ class SessionRepository {
     lastSeenAt,
     userAgent,
     ipAddress,
-  }: TouchActivityInput) {
-    return prisma.session.update({
+  }: TouchActivityInput, db: SessionDbClient = prisma) {
+    return db.session.update({
       where: { id: sessionId },
       data: {
         lastSeenAt,

@@ -1,4 +1,5 @@
 import { SessionStatus, RefreshTokenStatus } from "@prisma/client";
+import prisma from "../config/prisma";
 import logger from "../logger";
 import AppError from "../errors/AppError";
 import passwordHasher from "./passwordHasher";
@@ -35,7 +36,26 @@ type RevokeCurrentSessionInput = {
   context: RequestContext;
 };
 
+class RefreshRotationConflictError extends Error {}
+
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
+
+const isUniqueConstraintError = (error: unknown, field: string): boolean => {
+  if (!error || typeof error !== "object" || !("code" in error)) {
+    return false;
+  }
+
+  if (error.code !== "P2002" || !("meta" in error)) {
+    return false;
+  }
+
+  const meta = error.meta;
+  if (!meta || typeof meta !== "object" || !("target" in meta)) {
+    return false;
+  }
+
+  return Array.isArray(meta.target) && meta.target.includes(field);
+};
 
 const serializeUser = (user: {
   id: number;
@@ -97,6 +117,18 @@ class AuthService {
     };
   }
 
+  private issueTokenPair(userId: number, sessionId: string) {
+    const accessToken = tokenService.issueAccessToken({ userId, sessionId });
+    const refreshToken = tokenService.issueRefreshToken({ userId, sessionId });
+
+    return {
+      accessToken: accessToken.token,
+      refreshToken: refreshToken.token,
+      refreshTokenJti: refreshToken.tokenJti,
+      refreshTokenExpiresAt: refreshToken.expiresAt,
+    };
+  }
+
   private async compromiseSession(
     sessionId: string,
     tokenId: string,
@@ -134,6 +166,16 @@ class AuthService {
       name,
       email: normalizedEmail,
       passwordHash,
+    }).catch((error: unknown) => {
+      if (isUniqueConstraintError(error, "email")) {
+        throw new AppError({
+          message: "user already exists",
+          code: "USER_ALREADY_EXISTS",
+          statusCode: 409,
+        });
+      }
+
+      throw error;
     });
 
     return {
@@ -240,14 +282,46 @@ class AuthService {
     }
 
     const now = new Date();
-    const tokens = await this.createTokenPair(identity.userId, session.id, storedToken.id);
+    const tokens = this.issueTokenPair(identity.userId, session.id);
 
-    await refreshTokenRepository.markUsed(storedToken.id, now, tokens.storedRefreshToken.id);
-    const updatedSession = await sessionRepository.touchActivity({
-      sessionId: session.id,
-      lastSeenAt: now,
-      userAgent: context.userAgent,
-      ipAddress: context.ipAddress,
+    const updatedSession = await prisma.$transaction(async (tx) => {
+      const storedRefreshToken = await refreshTokenRepository.create(
+        {
+          sessionId: session.id,
+          tokenHash: hashToken(tokens.refreshToken),
+          jti: tokens.refreshTokenJti,
+          expiresAt: tokens.refreshTokenExpiresAt,
+          parentTokenId: storedToken.id,
+        },
+        tx,
+      );
+
+      const wasConsumed = await refreshTokenRepository.markUsedIfActive(
+        storedToken.id,
+        now,
+        storedRefreshToken.id,
+        tx,
+      );
+
+      if (!wasConsumed) {
+        throw new RefreshRotationConflictError();
+      }
+
+      return sessionRepository.touchActivity(
+        {
+          sessionId: session.id,
+          lastSeenAt: now,
+          userAgent: context.userAgent,
+          ipAddress: context.ipAddress,
+        },
+        tx,
+      );
+    }).catch((error: unknown) => {
+      if (error instanceof RefreshRotationConflictError) {
+        return this.compromiseSession(session.id, storedToken.id, context);
+      }
+
+      throw error;
     });
 
     this.audit("auth.refresh.succeeded", context, {
