@@ -26,6 +26,8 @@ Many portfolio auth APIs stop at registration, login, and a basic JWT flow. This
 - Strict JWT validation with separate access and refresh secrets, enforced issuer, audience, and token type.
 - Contract-driven OpenAPI output, typed environment validation, and infrastructure-backed integration tests in GitHub Actions.
 - Redis-backed rate limiting with in-memory fail-soft behaviour and structured request correlation.
+- Prometheus-compatible operational metrics with local Prometheus/Grafana assets.
+- Reproducible `k6` load scenarios with a published benchmark baseline for the auth lifecycle.
 
 ## Architecture and security notes
 
@@ -33,6 +35,21 @@ Many portfolio auth APIs stop at registration, login, and a basic JWT flow. This
 - [`docs/adr/0002-refresh-token-rotation.md`](./docs/adr/0002-refresh-token-rotation.md)
 - [`docs/adr/0003-rate-limit-fail-soft.md`](./docs/adr/0003-rate-limit-fail-soft.md)
 - [`docs/threat-model.md`](./docs/threat-model.md)
+
+## Operational proof
+
+- Architecture decisions: [`docs/adr/`](./docs/adr)
+- Threat model: [`docs/threat-model.md`](./docs/threat-model.md)
+- Benchmark report: [`docs/benchmarks/auth-benchmark.md`](./docs/benchmarks/auth-benchmark.md)
+- Observability guide: [`docs/observability.md`](./docs/observability.md)
+- Grafana dashboard: [`deploy/observability/grafana/dashboards/auth-api-dashboard.json`](./deploy/observability/grafana/dashboards/auth-api-dashboard.json)
+
+Latest benchmark baseline:
+
+- `24.48 req/s` aggregate request throughput
+- `709.97ms` p95 request latency
+- `1023.93ms` p99 request latency
+- `100%` scenario check pass rate across session and replay flows
 
 ## Repository security posture
 
@@ -70,6 +87,7 @@ The service ships:
 - contract-driven OpenAPI output
 - structured audit logging and request correlation
 - Redis-backed rate limiting with in-memory fail-soft fallback
+- Prometheus-compatible metrics gated by configuration
 
 ## API surface
 
@@ -85,6 +103,7 @@ Base contract:
 - `DELETE /v1/auth/sessions`
 - `GET /health`
 - `GET /ready`
+- `GET /metrics`
 - `GET /docs`
 - `GET /docs.json`
 
@@ -142,6 +161,7 @@ RATE_LIMIT_MAX_REQUESTS=100
 LOG_LEVEL="info"
 TRUST_PROXY=0
 DOCS_ENABLED=true
+METRICS_ENABLED=false
 BCRYPT_ROUNDS=10
 ```
 
@@ -181,6 +201,38 @@ Deployment setup material:
 - [`railway.json`](./railway.json)
 
 The repository is ready for a public demo deployment, but the live URL depends on Railway project configuration plus the required GitHub repository secrets.
+
+## Observability
+
+Enable metrics locally with `METRICS_ENABLED=true` and expose:
+
+- `GET /metrics`
+
+Local observability assets:
+
+- [`docs/observability.md`](./docs/observability.md)
+- [`deploy/observability/docker-compose.yml`](./deploy/observability/docker-compose.yml)
+- [`deploy/observability/grafana/dashboards/auth-api-dashboard.json`](./deploy/observability/grafana/dashboards/auth-api-dashboard.json)
+
+Bring up Prometheus and Grafana locally with:
+
+```bash
+docker compose -f deploy/observability/docker-compose.yml up -d
+```
+
+## Benchmarks
+
+The repository includes a reproducible `k6` benchmark for the session lifecycle and refresh replay path:
+
+- scenario: [`tests/load/auth-lifecycle.k6.mjs`](./tests/load/auth-lifecycle.k6.mjs)
+- report: [`docs/benchmarks/auth-benchmark.md`](./docs/benchmarks/auth-benchmark.md)
+
+Run it with:
+
+```bash
+npm run prisma:migrate:deploy
+docker compose -f docker-compose.yml -f docker-compose.benchmark.yml up --build --abort-on-container-exit --exit-code-from k6 k6
+```
 
 ## Scripts
 
