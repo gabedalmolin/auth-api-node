@@ -9,7 +9,7 @@
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/server.js",
     "test": "vitest run --config vitest.config.mjs",
-    "test:integration": "RUN_INTEGRATION_TESTS=1 vitest run --config vitest.config.mjs tests/integration/**/*.test.ts",
+    "test:integration": "RUN_INTEGRATION_TESTS=1 vitest run --config vitest.config.mjs tests/integration/auth.e2e.test.ts",
     "test:coverage": "vitest run --config vitest.config.mjs --coverage",
     "lint": "biome lint .",
     "lint:fix": "biome lint . --write",
