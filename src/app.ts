@@ -2,6 +2,7 @@ import express from "express";
 import authRoutes from "./routes/authRoutes";
 import docsRoutes from "./routes/docsRoutes";
 import healthRoutes from "./routes/healthRoutes";
+import metricsRoutes from "./routes/metricsRoutes";
 import requestId from "./middlewares/requestId";
 import requestLogger from "./middlewares/logger";
 import errorHandler from "./middlewares/errorHandler";
@@ -15,6 +16,7 @@ app.use(requestId);
 app.use(requestLogger);
 app.use("/", docsRoutes);
 app.use("/", healthRoutes);
+app.use("/", metricsRoutes);
 app.use("/v1/auth", authRoutes);
 app.use(errorHandler);
 

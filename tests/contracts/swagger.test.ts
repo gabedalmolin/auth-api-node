@@ -7,5 +7,6 @@ describe("swagger spec", () => {
     expect(swaggerSpec.paths).toHaveProperty("/v1/auth/register");
     expect(swaggerSpec.paths).toHaveProperty("/v1/auth/sessions");
     expect(swaggerSpec.paths).toHaveProperty("/v1/auth/tokens/refresh");
+    expect(swaggerSpec.paths).toHaveProperty("/metrics");
   });
 });

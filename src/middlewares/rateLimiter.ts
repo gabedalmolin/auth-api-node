@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import AppError from "../errors/AppError";
 import { env } from "../config/env";
 import { redisClient, redisEnabled } from "../config/redis";
+import { authMetrics } from "../metrics/authMetrics";
 
 type RateLimiterOptions = {
   bucket: string;
@@ -73,6 +74,7 @@ export function createRateLimiter({
         : consumeMemory(key, windowMs, now);
 
       if (count > maxRequests) {
+        authMetrics.recordRateLimitHit(bucket, redisEnabled ? "redis" : "memory");
         throw new AppError({
           message: "too many requests",
           code: "TOO_MANY_REQUESTS",
@@ -90,6 +92,7 @@ export function createRateLimiter({
 
       const count = consumeMemory(key, windowMs, now);
       if (count > maxRequests) {
+        authMetrics.recordRateLimitHit(bucket, "memory");
         return next(
           new AppError({
             message: "too many requests",

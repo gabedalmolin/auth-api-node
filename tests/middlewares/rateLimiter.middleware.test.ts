@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const { recordRateLimitHit } = vi.hoisted(() => ({
+  recordRateLimitHit: vi.fn(),
+}));
+
 const loadRateLimiter = async (options: {
   redisEnabled: boolean;
   incr?: () => Promise<number>;
@@ -21,6 +25,12 @@ const loadRateLimiter = async (options: {
   vi.doMock("../../src/config/redis", () => ({
     redisEnabled: options.redisEnabled,
     redisClient,
+  }));
+
+  vi.doMock("../../src/metrics/authMetrics", () => ({
+    authMetrics: {
+      recordRateLimitHit,
+    },
   }));
 
   return import("../../src/middlewares/rateLimiter");
@@ -49,6 +59,7 @@ describe("rateLimiter", () => {
 
     expect(nextOne).toHaveBeenCalledWith();
     expect(nextTwo.mock.calls[0]?.[0]?.code).toBe("TOO_MANY_REQUESTS");
+    expect(recordRateLimitHit).toHaveBeenCalledWith("test", "memory");
   });
 
   it("falls back to memory when redis errors", async () => {
@@ -74,5 +85,34 @@ describe("rateLimiter", () => {
 
     expect(next).toHaveBeenCalledWith();
     expect(warn).toHaveBeenCalled();
+  });
+
+  it("records a rate-limit hit when redis-backed limiting blocks", async () => {
+    const { createRateLimiter } = await loadRateLimiter({
+      redisEnabled: true,
+      incr: (() => {
+        let count = 1;
+
+        return () => Promise.resolve(count++);
+      })(),
+    });
+    const limiter = createRateLimiter({
+      bucket: "auth",
+      maxRequests: 1,
+      windowMs: 60_000,
+      resolveKey: (req) => req.ip || "global",
+    });
+
+    const req = {
+      ip: "10.10.0.3",
+      log: { warn: vi.fn() },
+    } as unknown as Parameters<typeof limiter>[0];
+
+    await limiter(req, {} as never, vi.fn());
+    const blocked = vi.fn();
+    await limiter(req, {} as never, blocked);
+
+    expect(blocked.mock.calls[0]?.[0]?.code).toBe("TOO_MANY_REQUESTS");
+    expect(recordRateLimitHit).toHaveBeenCalledWith("auth", "redis");
   });
 });

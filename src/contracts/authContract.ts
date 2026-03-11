@@ -312,5 +312,24 @@ export const openApiSpec = {
         },
       },
     },
+    "/metrics": {
+      get: {
+        tags: ["Operations"],
+        summary: "Prometheus metrics endpoint",
+        responses: {
+          200: {
+            description: "Prometheus text exposition for service metrics",
+            content: {
+              "text/plain": {
+                schema: {
+                  type: "string",
+                },
+              },
+            },
+          },
+          404: { description: "Metrics endpoint disabled" },
+        },
+      },
+    },
   },
 } as const;
