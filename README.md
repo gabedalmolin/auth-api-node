@@ -103,16 +103,13 @@ docker compose up -d postgres redis
 Install dependencies, generate Prisma Client, and run the API:
 
 ```bash
-npm install
+npm ci
 npm run prisma:generate
+npm run prisma:migrate:deploy
 npm run dev
 ```
 
-Apply migrations when the database is ready:
-
-```bash
-npx prisma migrate deploy
-```
+The same migration command is used in CI, so local and remote validation stay aligned.
 
 ## Scripts
 
@@ -121,10 +118,11 @@ npx prisma migrate deploy
 - `npm run start`: run the compiled server
 - `npm run lint`: lint with Biome
 - `npm run typecheck`: strict TypeScript check
-- `npm test`: unit and contract suite
+- `npm test`: fast unit and contract suite
 - `npm run test:integration`: integration suite against real Postgres and Redis
 - `npm run test:coverage`: Vitest coverage run
 - `npm run prisma:generate`: regenerate Prisma Client
+- `npm run prisma:migrate:deploy`: apply committed migrations safely
 
 ## Testing strategy
 
@@ -138,13 +136,13 @@ The default `npm test` command is infrastructure-free and covers:
 - OpenAPI contract generation
 - refresh replay compromise logic
 
-The end-to-end suite lives in `tests/integration/` and is intentionally gated behind:
+The integration suite runs in GitHub Actions as the `integration` job and can be executed locally with the same script:
 
 ```bash
-RUN_INTEGRATION_TESTS=1 npm run test:integration
+npm run test:integration
 ```
 
-That suite expects local PostgreSQL and Redis to be available.
+That suite expects local PostgreSQL and Redis to be available and uses the same Prisma deploy migration step as CI.
 
 ## Docker
 
