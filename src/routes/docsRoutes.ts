@@ -1,16 +1,16 @@
 import { Router } from "express";
 import swaggerUi from "swagger-ui-express";
 import { env } from "../config/env";
-import swaggerSpec from "../docs/swagger";
+import { buildSwaggerSpec, resolveSwaggerBaseUrl } from "../docs/swagger";
 
 const router = Router();
 
-router.get("/docs.json", (_req, res) => {
+router.get("/docs.json", (req, res) => {
   if (!env.DOCS_ENABLED) {
     return res.status(404).json({ message: "docs disabled" });
   }
 
-  return res.json(swaggerSpec);
+  return res.json(buildSwaggerSpec(resolveSwaggerBaseUrl(req)));
 });
 
 router.use(
@@ -30,7 +30,11 @@ router.get("/docs", (req, res, next) => {
     return res.status(404).json({ message: "docs disabled" });
   }
 
-  return swaggerUi.setup(swaggerSpec)(req, res, next);
+  return swaggerUi.setup(buildSwaggerSpec(resolveSwaggerBaseUrl(req)))(
+    req,
+    res,
+    next,
+  );
 });
 
 export default router;
