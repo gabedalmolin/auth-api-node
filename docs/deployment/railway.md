@@ -61,6 +61,8 @@ The workflow:
 3. deploys the application with `railway up`
 4. runs `scripts/smoke-production.sh` against the public URL
 
+The workflow clears the default GitHub Actions `CI=true` value for the deploy step so Railway waits for the deployment result instead of switching to build-only CI mode.
+
 ## Railway config as code
 
 `railway.json` defines deployment behaviour that should stay versioned with the codebase:
