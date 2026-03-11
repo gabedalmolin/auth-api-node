@@ -47,6 +47,8 @@ Add the following repository secrets in GitHub:
 - `RAILWAY_ENVIRONMENT`: target Railway environment name or identifier, usually `production`
 - `RAILWAY_PUBLIC_URL`: public HTTPS base URL used by the smoke checks, for example `https://auth-api-production.up.railway.app`
 
+`RAILWAY_PUBLIC_URL` must belong to the same Railway service targeted by `RAILWAY_SERVICE`. If the public URL points to a different service or stale domain, the smoke check will typically return `404` for `/health`.
+
 ## Deployment workflow
 
 The deployment workflow lives in `.github/workflows/deploy.yml`.

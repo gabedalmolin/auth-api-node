@@ -8,6 +8,8 @@ if [ "${1:-}" = "" ]; then
 fi
 
 base_url="${1%/}"
+max_attempts="${SMOKE_MAX_ATTEMPTS:-36}"
+retry_delay_seconds="${SMOKE_RETRY_DELAY_SECONDS:-5}"
 
 case "${base_url}" in
   http://*|https://*)
@@ -18,31 +20,59 @@ case "${base_url}" in
     ;;
 esac
 
+preview_payload() {
+  printf '%s' "$1" | tr '\n' ' ' | cut -c1-240
+}
+
 curl_json() {
   local path="$1"
-  local payload
+  local attempt=1
+  local body_file
+  local payload=""
+  local status_code=""
+  local curl_exit=0
 
-  payload="$(
-    curl --fail --silent --show-error \
-      --location \
-      --max-redirs 5 \
-      --proto '=http,https' \
-      --proto-redir '=https' \
-    --retry 12 \
-    --retry-all-errors \
-    --retry-delay 5 \
-    "${base_url}${path}"
-  )"
+  body_file="$(mktemp)"
+  trap 'rm -f "${body_file}"' RETURN
 
-  case "${payload}" in
-    \{*|\[*)
-      printf '%s' "${payload}"
-      ;;
-    *)
-      echo "Expected JSON from ${base_url}${path}, but received a non-JSON response." >&2
-      exit 1
-      ;;
-  esac
+  while [ "${attempt}" -le "${max_attempts}" ]; do
+    curl_exit=0
+    status_code="$(
+      curl --silent --show-error \
+        --location \
+        --max-redirs 5 \
+        --proto '=http,https' \
+        --proto-redir '=https' \
+        --connect-timeout 10 \
+        --max-time 20 \
+        --output "${body_file}" \
+        --write-out '%{http_code}' \
+        "${base_url}${path}"
+    )" || curl_exit=$?
+
+    payload="$(cat "${body_file}")"
+
+    if [ "${curl_exit}" -eq 0 ]; then
+      case "${payload}" in
+        \{*|\[*)
+          if [ "${status_code}" = "200" ]; then
+            printf '%s' "${payload}"
+            return 0
+          fi
+          ;;
+      esac
+    fi
+
+    if [ "${attempt}" -lt "${max_attempts}" ]; then
+      echo "Waiting for ${base_url}${path} (attempt ${attempt}/${max_attempts}, status=${status_code:-curl-error})" >&2
+      sleep "${retry_delay_seconds}"
+    fi
+
+    attempt=$((attempt + 1))
+  done
+
+  echo "Expected JSON from ${base_url}${path}, but received status ${status_code:-curl-error} with payload: $(preview_payload "${payload}")" >&2
+  exit 1
 }
 
 health_payload="$(curl_json "/health")"
