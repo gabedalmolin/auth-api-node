@@ -34,6 +34,15 @@ Many portfolio auth APIs stop at registration, login, and a basic JWT flow. This
 - [`docs/adr/0003-rate-limit-fail-soft.md`](./docs/adr/0003-rate-limit-fail-soft.md)
 - [`docs/threat-model.md`](./docs/threat-model.md)
 
+## Repository security posture
+
+- protected `main` branch with required `quality` and `integration` checks
+- GitHub secret scanning and push protection enabled
+- Dependabot security updates enabled
+- CodeQL analysis on pull requests and `main`
+- dependency review on pull requests
+- coordinated disclosure guidance in [`SECURITY.md`](./SECURITY.md)
+
 ## Auth lifecycle at a glance
 
 ```mermaid
