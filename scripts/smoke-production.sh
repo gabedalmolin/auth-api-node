@@ -9,13 +9,40 @@ fi
 
 base_url="${1%/}"
 
+case "${base_url}" in
+  http://*|https://*)
+    ;;
+  *)
+    echo "Expected a full base URL including scheme, for example: https://auth-api-production.up.railway.app" >&2
+    exit 1
+    ;;
+esac
+
 curl_json() {
   local path="$1"
-  curl --fail --silent --show-error \
+  local payload
+
+  payload="$(
+    curl --fail --silent --show-error \
+      --location \
+      --max-redirs 5 \
+      --proto '=http,https' \
+      --proto-redir '=https' \
     --retry 12 \
     --retry-all-errors \
     --retry-delay 5 \
     "${base_url}${path}"
+  )"
+
+  case "${payload}" in
+    \{*|\[*)
+      printf '%s' "${payload}"
+      ;;
+    *)
+      echo "Expected JSON from ${base_url}${path}, but received a non-JSON response." >&2
+      exit 1
+      ;;
+  esac
 }
 
 health_payload="$(curl_json "/health")"

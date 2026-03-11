@@ -45,7 +45,7 @@ Add the following repository secrets in GitHub:
 - `RAILWAY_PROJECT_ID`: target Railway project identifier
 - `RAILWAY_SERVICE`: target Railway service name or identifier for the API
 - `RAILWAY_ENVIRONMENT`: target Railway environment name or identifier, usually `production`
-- `RAILWAY_PUBLIC_URL`: public HTTPS base URL used by the smoke checks
+- `RAILWAY_PUBLIC_URL`: public HTTPS base URL used by the smoke checks, for example `https://auth-api-production.up.railway.app`
 
 ## Deployment workflow
 
