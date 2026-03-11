@@ -148,6 +148,24 @@ npm run dev
 
 The same migration command is used in CI, so local and remote validation stay aligned.
 
+## Production deployment
+
+The default public hosting target for this project is **Railway**.
+
+Deployment automation is implemented through [`.github/workflows/deploy.yml`](./.github/workflows/deploy.yml) and supports:
+
+- published GitHub releases
+- manual dispatch with a custom ref
+- smoke validation for `/health`, `/ready`, and `/docs.json`
+
+Deployment setup material:
+
+- [`docs/deployment/railway.md`](./docs/deployment/railway.md)
+- [`.env.production.example`](./.env.production.example)
+- [`railway.json`](./railway.json)
+
+The repository is ready for a public demo deployment, but the live URL depends on Railway project configuration plus the required GitHub repository secrets.
+
 ## Scripts
 
 - `npm run dev`: run the API with `tsx` watch mode
@@ -187,6 +205,7 @@ The repository includes:
 
 - a production-oriented `Dockerfile`
 - a `docker-compose.yml` with `app`, `postgres`, and `redis`
+- a Railway deployment workflow and smoke validation path
 
 To run the full stack with Compose:
 
