@@ -1,16 +1,17 @@
-const pino = require("pino");
+import pino, { type LoggerOptions } from "pino";
+import { env } from "./config/env";
 
-const isTestEnv = process.env.NODE_ENV === "test";
-// Logger base: JSON, nível info por padrão
-const logger = pino({
-  level: process.env.LOG_LEVEL || (isTestEnv ? "silent" : "info"),
-  transport:
-    process.env.NODE_ENV === "development"
-      ? {
-          target: "pino-pretty",
-          options: { colorize: true, translateTime: "SYS:standard" },
-        }
-      : undefined,
-});
+const loggerOptions: LoggerOptions = {
+  level: env.LOG_LEVEL,
+};
 
-module.exports = logger;
+if (env.NODE_ENV === "development") {
+  loggerOptions.transport = {
+    target: "pino-pretty",
+    options: { colorize: true, translateTime: "SYS:standard" },
+  };
+}
+
+const logger = pino(loggerOptions);
+
+export default logger;

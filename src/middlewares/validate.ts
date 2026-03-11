@@ -1,15 +1,32 @@
-const AppError = require("../errors/AppError.ts");
+import type { NextFunction, Request, Response } from "express";
+import type { ZodSchema } from "zod";
+import AppError from "../errors/AppError";
 
-module.exports = (schema) => (req, _res, next) => {
-  const result = schema.safeParse(req.body);
+type ValidationTarget = "body" | "params";
 
-  if (!result.success) {
-    const message = result.error.issues.map((i) => i.message).join("; ");
-    return next(
-      new AppError(message || "invalid payload", 400, "INVALID_PAYLOAD"),
-    );
-  }
+export default function validate<TSchema extends ZodSchema>(
+  schema: TSchema,
+  target: ValidationTarget = "body",
+) {
+  return (req: Request, _res: Response, next: NextFunction): void => {
+    const result = schema.safeParse(req[target]);
 
-  req.body = result.data; // payload já normalizado
-  return next();
-};
+    if (!result.success) {
+      next(
+        new AppError({
+          message: "invalid payload",
+          code: "INVALID_PAYLOAD",
+          statusCode: 400,
+          details: result.error.issues.map((issue) => ({
+            path: issue.path.join(".") || target,
+            message: issue.message,
+          })),
+        }),
+      );
+      return;
+    }
+
+    req[target] = result.data;
+    next();
+  };
+}

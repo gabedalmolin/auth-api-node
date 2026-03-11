@@ -1,53 +1,65 @@
-const Redis = require("ioredis");
+import Redis from "ioredis";
+import { env } from "./env";
 
-const redisUrl = process.env.REDIS_URL;
-const redisEnabled = Boolean(redisUrl);
+export const redisEnabled = Boolean(env.REDIS_URL);
 
-let redisClient = null;
+export const redisClient = redisEnabled
+  ? new Redis(env.REDIS_URL as string, {
+      maxRetriesPerRequest: 1,
+      enableOfflineQueue: false,
+      lazyConnect: env.NODE_ENV === "test",
+    })
+  : null;
 
-if (redisEnabled) {
-  redisClient = new Redis(redisUrl, {
-    maxRetriesPerRequest: 1,
-    enableOfflineQueue: false,
-  });
-
-  redisClient.on("error", (err) => {
-    if (process.env.NODE_ENV !== "test") {
-      console.error("[redis] connection error:", err.message);
+if (redisClient) {
+  redisClient.on("error", (error) => {
+    if (env.NODE_ENV !== "test") {
+      console.error("[redis] connection error:", error.message);
     }
   });
 }
 
-async function closeRedisConnection() {
-  if (!redisClient) return;
-  if (redisClient.status === "end") return;
+export async function pingRedis(): Promise<"up" | "down" | "disabled"> {
+  if (!redisClient) {
+    return "disabled";
+  }
+
+  try {
+    if (redisClient.status === "wait") {
+      await redisClient.connect();
+    }
+
+    await redisClient.ping();
+    return "up";
+  } catch {
+    return "down";
+  }
+}
+
+export async function closeRedisConnection(): Promise<void> {
+  if (!redisClient || redisClient.status === "end") {
+    return;
+  }
 
   const forceDisconnect = () => {
     redisClient.disconnect();
 
-    // Em testes, força fechamento do stream para evitar timer pendente do ioredis
-    if (process.env.NODE_ENV === "test") {
-      const stream = redisClient.connector?.stream;
+    if (env.NODE_ENV === "test") {
+      const stream = (redisClient as unknown as { connector?: { stream?: { destroyed: boolean; destroy: () => void } } }).connector?.stream;
       if (stream && !stream.destroyed) {
         stream.destroy();
       }
     }
   };
 
-  if (redisClient.status !== "ready") {
+  if (redisClient.status === "wait") {
     forceDisconnect();
     return;
   }
 
   try {
     await redisClient.quit();
-  } catch (_error) {
+  } catch {
     forceDisconnect();
   }
 }
-
-module.exports = {
-  redisClient,
-  redisEnabled,
-  closeRedisConnection,
-};

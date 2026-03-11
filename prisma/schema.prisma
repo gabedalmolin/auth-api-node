@@ -6,29 +6,65 @@ datasource db {
   provider = "postgresql"
 }
 
-model User {
-  id       Int     @id @default(autoincrement())
-  name     String
-  email    String  @unique
-  password String
+enum SessionStatus {
+  ACTIVE
+  REVOKED
+  COMPROMISED
+}
 
+enum RefreshTokenStatus {
+  ACTIVE
+  USED
+  REVOKED
+  REUSED
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  name         String
+  email        String    @unique
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  sessions     Session[]
+}
+
+model Session {
+  id            String        @id @default(uuid())
+  userId        Int
+  status        SessionStatus @default(ACTIVE)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  lastSeenAt    DateTime?
+  userAgent     String?
+  ipAddress     String?
+  revokedAt     DateTime?
+  revokeReason  String?
+  compromisedAt DateTime?
+
+  user          User           @relation(fields: [userId], references: [id])
   refreshTokens RefreshToken[]
+
+  @@index([userId])
+  @@index([status])
 }
 
 model RefreshToken {
-  id        String   @id @default(uuid())
-  tokenHash     String   @unique
-  jti       String   @unique
-  userId    Int
-  revoked   Boolean  @default(false)
-  lastUsedAt DateTime?
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-  userAgent  String?
-  ipAddress  String?
+  id                String             @id @default(uuid())
+  sessionId         String
+  tokenHash         String             @unique
+  jti               String             @unique
+  status            RefreshTokenStatus @default(ACTIVE)
+  expiresAt         DateTime
+  createdAt         DateTime           @default(now())
+  usedAt            DateTime?
+  revokedAt         DateTime?
+  parentTokenId     String?
+  replacedByTokenId String?
 
+  session Session @relation(fields: [sessionId], references: [id])
 
-  user User @relation(fields: [userId], references: [id])
-
-  @@index([userId])
+  @@index([sessionId])
+  @@index([status])
+  @@index([sessionId, status])
 }

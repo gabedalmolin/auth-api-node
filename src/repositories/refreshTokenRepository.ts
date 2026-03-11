@@ -1,61 +1,65 @@
-const prisma = require("../config/prisma.ts");
+import { RefreshTokenStatus } from "@prisma/client";
+import prisma from "../config/prisma";
+
+type CreateRefreshTokenInput = {
+  sessionId: string;
+  tokenHash: string;
+  jti: string;
+  expiresAt: Date;
+  parentTokenId?: string;
+};
 
 class RefreshTokenRepository {
-  async create({ tokenHash, jti, userId, expiresAt }) {
+  async create(data: CreateRefreshTokenInput) {
     return prisma.refreshToken.create({
-      data: { tokenHash, jti, userId, expiresAt },
+      data,
     });
   }
 
-  async findByJti(jti) {
+  async findByJti(jti: string) {
     return prisma.refreshToken.findUnique({
       where: { jti },
     });
   }
 
-  async revokeByJti(jti) {
-    return prisma.refreshToken.updateMany({
-      where: { jti },
-      data: { revoked: true },
+  async markUsed(tokenId: string, usedAt: Date, replacedByTokenId: string) {
+    return prisma.refreshToken.update({
+      where: { id: tokenId },
+      data: {
+        status: RefreshTokenStatus.USED,
+        usedAt,
+        replacedByTokenId,
+      },
     });
   }
 
-  async findActiveByUserId(userId) {
-    return prisma.refreshToken.findMany({
+  async markReused(tokenId: string, revokedAt: Date) {
+    return prisma.refreshToken.updateMany({
       where: {
-        userId,
-        revoked: false,
-        expiresAt: { gt: new Date() },
+        id: tokenId,
+        status: {
+          in: [RefreshTokenStatus.ACTIVE, RefreshTokenStatus.USED],
+        },
       },
-      select: {
-        jti: true,
-        createdAt: true,
-        expiresAt: true,
+      data: {
+        status: RefreshTokenStatus.REUSED,
+        revokedAt,
       },
-      orderBy: { createdAt: "desc" },
     });
   }
 
-  async revokeByJtiAndUserId({ jti, userId }) {
+  async revokeActiveBySessionId(sessionId: string, revokedAt: Date) {
     return prisma.refreshToken.updateMany({
       where: {
-        jti,
-        userId,
-        revoked: false,
+        sessionId,
+        status: RefreshTokenStatus.ACTIVE,
       },
-      data: { revoked: true },
-    });
-  }
-
-  async revokeAllByUserId(userId) {
-    return prisma.refreshToken.updateMany({
-      where: {
-        userId,
-        revoked: false,
+      data: {
+        status: RefreshTokenStatus.REVOKED,
+        revokedAt,
       },
-      data: { revoked: true },
     });
   }
 }
 
-module.exports = new RefreshTokenRepository();
+export default new RefreshTokenRepository();

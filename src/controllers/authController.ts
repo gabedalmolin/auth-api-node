@@ -1,114 +1,121 @@
-const authService = require("../services/authService.ts");
+import type { NextFunction, Request, Response } from "express";
+import authService from "../services/authService";
 
-// REGISTER
-async function register(req, res, next) {
+const requestContext = (req: Request) => ({
+  correlationId: req.correlationId,
+  ipAddress: req.ip ?? null,
+  userAgent: req.header("user-agent") ?? null,
+});
+
+export async function register(req: Request, res: Response, next: NextFunction) {
   try {
-    const { name, email, password } = req.body;
-
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: "missing required fields" });
-    }
-
-    const user = await authService.register(req.body);
-    return res.status(201).json(user);
-  } catch (err) {
-    return next(err);
+    const result = await authService.register(req.body);
+    return res.status(201).json(result);
+  } catch (error) {
+    return next(error);
   }
 }
 
-// LOGIN
-async function login(req, res, next) {
+export async function createSession(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
   try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({ error: "missing required fields" });
-    }
-
-    const tokens = await authService.login(req.body);
-    return res.status(200).json(tokens);
-  } catch (err) {
-    return next(err);
-  }
-}
-
-// REFRESH TOKEN
-async function refresh(req, res, next) {
-  try {
-    const { refreshToken } = req.body;
-
-    if (!refreshToken) {
-      return res.status(400).json({ error: "refresh token required" });
-    }
-
-    const tokens = await authService.refreshToken(refreshToken);
-    return res.status(200).json(tokens);
-  } catch (err) {
-    return next(err);
-  }
-}
-
-// LOGOUT (single refresh token by token value)
-async function logout(req, res, next) {
-  try {
-    const { refreshToken } = req.body;
-
-    if (!refreshToken) {
-      return res.status(400).json({ error: "refresh token required" });
-    }
-
-    await authService.logout(refreshToken);
-    return res.status(200).json({ message: "logged out successfully" });
-  } catch (err) {
-    return next(err);
-  }
-}
-
-// LIST ACTIVE SESSIONS
-async function sessions(req, res, next) {
-  try {
-    const data = await authService.listSessions(req.userId);
-    return res.status(200).json({ sessions: data });
-  } catch (err) {
-    return next(err);
-  }
-}
-
-// LOGOUT A SPECIFIC SESSION (by jti)
-async function logoutSession(req, res, next) {
-  try {
-    const { jti } = req.body;
-    const result = await authService.logoutSession({ userId: req.userId, jti });
-
-    return res.status(200).json({
-      message: "session revoked successfully",
-      ...result,
+    const result = await authService.createSession({
+      ...req.body,
+      context: requestContext(req),
     });
-  } catch (err) {
-    return next(err);
+    return res.status(200).json(result);
+  } catch (error) {
+    return next(error);
   }
 }
 
-// LOGOUT ALL SESSIONS OF CURRENT USER
-async function logoutAll(req, res, next) {
+export async function refreshSession(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
   try {
-    const result = await authService.logoutAll(req.userId);
-
-    return res.status(200).json({
-      message: "all sessions revoked successfully",
-      ...result,
+    const result = await authService.refreshSession({
+      ...req.body,
+      context: requestContext(req),
     });
-  } catch (err) {
-    return next(err);
+    return res.status(200).json(result);
+  } catch (error) {
+    return next(error);
   }
 }
 
-module.exports = {
-  register,
-  login,
-  refresh,
-  logout,
-  sessions,
-  logoutSession,
-  logoutAll,
-};
+export async function revokeCurrentSession(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    await authService.revokeCurrentSession({
+      ...req.body,
+      context: requestContext(req),
+    });
+    return res.status(204).send();
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function me(req: Request, res: Response, next: NextFunction) {
+  try {
+    const result = await authService.getMe(req.auth.userId, req.auth.sessionId);
+    return res.status(200).json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function listSessions(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const result = await authService.listSessions(
+      req.auth.userId,
+      req.auth.sessionId,
+    );
+    return res.status(200).json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function revokeSession(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const sessionId = req.params.sessionId as string;
+    await authService.revokeSession(
+      req.auth.userId,
+      sessionId,
+      requestContext(req),
+    );
+    return res.status(204).send();
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function revokeAllSessions(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    await authService.revokeAllSessions(req.auth.userId, requestContext(req));
+    return res.status(204).send();
+  } catch (error) {
+    return next(error);
+  }
+}

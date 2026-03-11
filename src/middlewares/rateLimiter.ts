@@ -1,30 +1,48 @@
-const AppError = require("../errors/AppError.ts");
-const { redisClient, redisEnabled } = require("../config/redis.ts");
+import type { NextFunction, Request, Response } from "express";
+import AppError from "../errors/AppError";
+import { env } from "../config/env";
+import { redisClient, redisEnabled } from "../config/redis";
 
-const windowMs = Number(process.env.RATE_LIMIT_WINDOW_MS || 60_000);
-const maxRequests = Number(process.env.RATE_LIMIT_MAX_REQUESTS || 100);
+type RateLimiterOptions = {
+  bucket: string;
+  maxRequests?: number;
+  windowMs?: number;
+  resolveKey: (req: Request) => string;
+};
 
-// Fallback local para quando Redis não estiver configurado/disponível
-const memoryBuckets = new Map();
+type MemoryBucket = {
+  count: number;
+  expiresAt: number;
+};
 
-const consumeMemory = (key, now) => {
-  const bucket = memoryBuckets.get(key) || {
+const memoryBuckets = new Map<string, MemoryBucket>();
+
+const consumeMemory = (key: string, windowMs: number, now: number): number => {
+  const current = memoryBuckets.get(key) ?? {
     count: 0,
     expiresAt: now + windowMs,
   };
 
-  if (now > bucket.expiresAt) {
-    bucket.count = 0;
-    bucket.expiresAt = now + windowMs;
+  if (now > current.expiresAt) {
+    current.count = 0;
+    current.expiresAt = now + windowMs;
   }
 
-  bucket.count += 1;
-  memoryBuckets.set(key, bucket);
+  current.count += 1;
+  memoryBuckets.set(key, current);
 
-  return bucket.count;
+  return current.count;
 };
 
-const consumeRedis = async (key) => {
+const consumeRedis = async (key: string, windowMs: number): Promise<number> => {
+  if (!redisClient) {
+    throw new Error("redis unavailable");
+  }
+
+  if (redisClient.status === "wait") {
+    await redisClient.connect();
+  }
+
   const count = await redisClient.incr(key);
 
   if (count === 1) {
@@ -34,28 +52,59 @@ const consumeRedis = async (key) => {
   return count;
 };
 
-module.exports = async (req, _res, next) => {
-  const key = `rl:${req.ip || "global"}`;
-  const now = Date.now();
+export function createRateLimiter({
+  bucket,
+  maxRequests = env.RATE_LIMIT_MAX_REQUESTS,
+  windowMs = env.RATE_LIMIT_WINDOW_MS,
+  resolveKey,
+}: RateLimiterOptions) {
+  return async function rateLimiter(
+    req: Request,
+    _res: Response,
+    next: NextFunction,
+  ): Promise<void> {
+    const identity = resolveKey(req) || "global";
+    const key = `rl:${bucket}:${identity}`;
+    const now = Date.now();
 
-  try {
-    const count = redisEnabled
-      ? await consumeRedis(key)
-      : consumeMemory(key, now);
+    try {
+      const count = redisEnabled
+        ? await consumeRedis(key, windowMs)
+        : consumeMemory(key, windowMs, now);
 
-    if (count > maxRequests) {
-      return next(new AppError("too many requests", 429, "TOO_MANY_REQUESTS"));
+      if (count > maxRequests) {
+        throw new AppError({
+          message: "too many requests",
+          code: "TOO_MANY_REQUESTS",
+          statusCode: 429,
+        });
+      }
+
+      return next();
+    } catch (error) {
+      if (error instanceof AppError) {
+        return next(error);
+      }
+
+      req.log.warn({ key, error }, "rate_limiter_fallback");
+
+      const count = consumeMemory(key, windowMs, now);
+      if (count > maxRequests) {
+        return next(
+          new AppError({
+            message: "too many requests",
+            code: "TOO_MANY_REQUESTS",
+            statusCode: 429,
+          }),
+        );
+      }
+
+      return next();
     }
+  };
+}
 
-    return next();
-  } catch {
-    // Fail-soft: se Redis falhar, usa memória para não derrubar a API
-    const count = consumeMemory(key, now);
-
-    if (count > maxRequests) {
-      return next(new AppError("too many requests", 429, "TOO_MANY_REQUESTS"));
-    }
-
-    return next();
-  }
-};
+export const authMutationRateLimiter = createRateLimiter({
+  bucket: "auth",
+  resolveKey: (req) => req.ip || "global",
+});

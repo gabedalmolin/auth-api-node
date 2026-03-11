@@ -1,7 +1,35 @@
-const app = require("./app");
+import app from "./app";
+import logger from "./logger";
+import { env } from "./config/env";
+import { closePrismaConnection } from "./config/prisma";
+import { closeRedisConnection } from "./config/redis";
 
-const PORT = process.env.PORT || 3000;
+const server = app.listen(env.PORT, () => {
+  logger.info({ port: env.PORT }, "server_started");
+});
 
-app.listen(PORT, () => {
-  console.log(`server running on port ${PORT}`);
+let isShuttingDown = false;
+
+const shutdown = async (signal: string) => {
+  if (isShuttingDown) {
+    return;
+  }
+
+  isShuttingDown = true;
+  logger.info({ signal }, "server_shutdown_started");
+
+  server.close(async () => {
+    await closeRedisConnection();
+    await closePrismaConnection();
+    logger.info({ signal }, "server_shutdown_completed");
+    process.exit(0);
+  });
+};
+
+process.on("SIGINT", () => {
+  void shutdown("SIGINT");
+});
+
+process.on("SIGTERM", () => {
+  void shutdown("SIGTERM");
 });

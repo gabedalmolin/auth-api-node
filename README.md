@@ -1,211 +1,175 @@
-# Auth API (Node.js + Express + Prisma)
+# Auth API
 
 ![CI](https://github.com/gabedalmolin/auth-api-node/actions/workflows/ci.yml/badge.svg)
 
-Production-oriented authentication and session management API engineered with a backend-first mindset: clear architectural boundaries, rotating token lifecycle, Redis-backed rate limiting, structured observability, OpenAPI documentation, and CI-enforced quality gates.
+Production-grade authentication API built with **Express 5**, **TypeScript**, **Prisma/PostgreSQL**, and **Redis**.
+
+This codebase is intentionally focused on **core authentication and session integrity**, not on identity-platform breadth. The goal is to model how a real backend auth service should be structured when correctness, operability, and change safety matter.
 
 ## Overview
 
-This project was built as an applied software engineering exercise with a deliberate focus on production-grade backend concerns: correctness, maintainability, operational clarity, and defensive design.
+The service ships:
 
-It is not intended to be a minimal auth demo or a framework-driven CRUD sample. The goal is to reflect how a real backend service should be structured and evolved when session integrity, reliability, and change confidence matter.
+- first-class `Session` records
+- refresh-token rotation with replay detection
+- explicit JWT claims for access and refresh tokens
+- typed environment validation with fail-fast startup
+- contract-driven OpenAPI output
+- structured audit logging and request correlation
+- Redis-backed rate limiting with in-memory fail-soft fallback
 
-Core capabilities include:
+## API surface
 
-- authentication with rotating `accessToken` and `refreshToken`
-- session revocation by token and by user
-- schema-based input validation and consistent error semantics
-- baseline observability for runtime diagnostics
-- continuous quality controls through linting, coverage, and CI
+Base contract:
 
-## Quality Snapshot (Feb 2026)
-
-- `16/16` test suites passing
-- `104/104` tests passing
-- global coverage: `99.2%` (branches `99.2%`)
-- `src/config` and `src/middlewares` at `100%` branch coverage
-- GitHub Actions CI stable on `main`
-
-## Stack
-
-- Node.js 20 LTS
-- Express 5
-- TypeScript 5.9
-- Prisma 7 + PostgreSQL
-- Redis (`ioredis`)
-- JWT (`jsonwebtoken`) + `bcryptjs`
-- Zod for request validation
-- Pino for structured logging
-- Vitest + Jest + Supertest
-- Biome for linting and formatting
-- Swagger UI + swagger-jsdoc
-
-## Architectural Direction
-
-The codebase follows a layered architecture with explicit separation of concerns:
-
-- `routes`: HTTP contract definition and middleware composition
-- `controllers`: request/response orchestration
-- `services`: business logic and application rules
-- `repositories`: persistence and database access
-
-This structure was chosen to keep the service predictable, testable, and maintainable as complexity grows, while avoiding unnecessary coupling between transport, business rules, and persistence concerns.
-
-Critical middleware responsibilities include:
-
-- `requestId`: per-request correlation
-- `logger`: structured logging with contextual metadata
-- `validate`: schema-driven validation with Zod
-- `authMiddleware`: JWT-based route protection
-- `rateLimiter`: abuse protection with Redis and in-memory fallback
-- `errorHandler`: standardised error response handling
-
-## Authentication and Session Lifecycle
-
-1. `POST /auth/register`: creates a user with a hashed password.
-2. `POST /auth/login`: validates credentials and issues `accessToken` and `refreshToken`.
-3. `POST /auth/refresh`: validates the refresh token, revokes the previous token, and issues a new token pair.
-4. `POST /auth/logout`: revokes the current session.
-5. `POST /auth/logout-session` and `POST /auth/logout-all`: terminate a specific session or all active sessions.
-
-## Security and Reliability Posture
-
-The implementation includes several deliberate engineering decisions to strengthen safety and operational behaviour:
-
-- refresh tokens are stored as hashed values (`tokenHash`) in the database
-- token rotation is enforced through `jti` with explicit revocation
-- `JWT_SECRET` is validated at startup to fail fast on invalid configuration
-- application errors are centralised through `AppError`
-- rate limiting is applied to sensitive endpoints
-- test logging noise is reduced to preserve readable feedback loops
-- test resources are properly torn down to prevent open handles and unstable runs
-
-These choices prioritise explicit control and lifecycle correctness over a thin happy-path implementation.
-
-## Local Setup
-
-Prerequisites:
-
-- Docker + Docker Compose
-- Node.js 20 LTS
-- npm
-
-Start infrastructure and run the application:
-
-```bash
-docker-compose up -d postgres redis
-npm install
-npx prisma migrate deploy
-npx prisma generate
-npm run dev
-```
-
-`.env` file:
-
-```env
-DATABASE_URL="postgresql://auth_user:auth_password@localhost:5432/auth_api"
-JWT_SECRET="<generate-a-strong-secret-with-at-least-32-characters>"
-PORT=3000
-REDIS_URL="redis://localhost:6379"
-RATE_LIMIT_WINDOW_MS=60000
-RATE_LIMIT_MAX_REQUESTS=100
-```
-
-For tests, use `tests/.env.test`.
-
-## Main Scripts
-
-- `npm run dev`: development with watch mode
-- `npm run start`: run the API
-- `npm run lint`: lint with Biome
-- `npm run format`: validate formatting
-- `npm test`: main test suite with Vitest
-- `npm run test:coverage:jest`: coverage run with Jest
-- `npm run test:coverage:vitest`: coverage run with Vitest
-- `npm run typecheck`: static type checking
-
-## Quick Validation
-
-```bash
-npm run lint
-npm run test:coverage:jest
-npx jest --config jest.config.cjs --runInBand --detectOpenHandles --openHandlesTimeout=5000
-```
-
-## Main Endpoints
-
-- `POST /auth/register`
-- `POST /auth/login`
-- `POST /auth/refresh`
-- `POST /auth/logout`
-- `GET /auth/profile`
-- `GET /users/me`
-- `GET /auth/sessions`
-- `POST /auth/logout-session`
-- `POST /auth/logout-all`
+- `POST /v1/auth/register`
+- `POST /v1/auth/sessions`
+- `POST /v1/auth/tokens/refresh`
+- `POST /v1/auth/sessions/current/revoke`
+- `GET /v1/auth/me`
+- `GET /v1/auth/sessions`
+- `DELETE /v1/auth/sessions/:sessionId`
+- `DELETE /v1/auth/sessions`
 - `GET /health`
 - `GET /ready`
 - `GET /docs`
 - `GET /docs.json`
 
-## Recent Engineering Milestones
+Core response patterns:
 
-Latest relevant deliveries on `main`:
+- login and refresh return `{ accessToken, refreshToken, user, session }`
+- register returns `{ user }`
+- revoke endpoints return `204 No Content`
+- errors return `{ error: { code, message, details?, correlationId } }`
 
-- [#14](https://github.com/gabedalmolin/auth-api-node/pull/14) improved test runtime stability through Prisma teardown hardening
-- [#15](https://github.com/gabedalmolin/auth-api-node/pull/15) increased branch coverage across authentication and rate limiter flows
-- [#16](https://github.com/gabedalmolin/auth-api-node/pull/16) reduced log noise during automated test execution
-- [#18](https://github.com/gabedalmolin/auth-api-node/pull/18) achieved full branch coverage for `src/config/prisma.ts`
-- [#19](https://github.com/gabedalmolin/auth-api-node/pull/19) achieved full branch coverage for `src/logger.ts`
-- [#20](https://github.com/gabedalmolin/auth-api-node/pull/20) achieved full branch coverage for `validate.ts` and `errorHandler.ts`
-- [#21](https://github.com/gabedalmolin/auth-api-node/pull/21) achieved full branch coverage for the rate limiter and Redis configuration
+## Security model
 
-## Technical Roadmap
+- Access and refresh tokens use **different secrets**.
+- JWT validation enforces **issuer**, **audience**, and **token type**.
+- Refresh tokens are stored as **SHA-256 hashes**, never as plaintext.
+- Refresh rotation is **chain-aware**.
+- Reusing an already-consumed refresh token marks the session as compromised and revokes its active tokens.
+- Protected routes validate both the access token and the current server-side session state.
 
-Planned next steps:
+## Architecture
 
-- formalise the long-term coverage strategy decision (`Jest` vs `Vitest` vs a documented hybrid model)
-- expand resilience scenarios for Redis and database unavailability
-- evolve session management towards richer device-level metadata
-- document session and token rotation decisions through an ADR
-- strengthen the security checklist around dependencies, secrets, and token expiry policies
+Main layers:
 
-Detailed backlog: `to-do.txt`.
+- `src/routes`: HTTP composition
+- `src/controllers`: request orchestration
+- `src/services`: auth and session business rules
+- `src/repositories`: persistence
+- `src/contracts`: request/response schemas and OpenAPI source of truth
+- `src/config`: validated environment and infrastructure clients
+
+Important runtime pieces:
+
+- `requestId` middleware for correlation IDs
+- request logger with structured logs
+- auth middleware with strict bearer parsing
+- Redis-first rate limiting with observable fallback
+- graceful shutdown for HTTP server, Prisma, and Redis
+
+## Environment
+
+Copy `.env.example` to `.env` and provide real secrets:
+
+```env
+DATABASE_URL="postgresql://auth_user:auth_password@localhost:5432/auth_api"
+ACCESS_TOKEN_SECRET="replace-this-with-a-strong-access-secret-123456"
+REFRESH_TOKEN_SECRET="replace-this-with-a-strong-refresh-secret-12345"
+ACCESS_TOKEN_EXPIRES_IN="15m"
+REFRESH_TOKEN_EXPIRES_IN="7d"
+JWT_ISSUER="auth-api"
+JWT_AUDIENCE="auth-api-clients"
+PORT=3000
+REDIS_URL="redis://localhost:6379"
+RATE_LIMIT_WINDOW_MS=60000
+RATE_LIMIT_MAX_REQUESTS=100
+LOG_LEVEL="info"
+TRUST_PROXY=0
+DOCS_ENABLED=true
+BCRYPT_ROUNDS=10
+```
+
+## Local development
+
+Start infrastructure:
+
+```bash
+docker compose up -d postgres redis
+```
+
+Install dependencies, generate Prisma Client, and run the API:
+
+```bash
+npm install
+npm run prisma:generate
+npm run dev
+```
+
+Apply migrations when the database is ready:
+
+```bash
+npx prisma migrate deploy
+```
+
+## Scripts
+
+- `npm run dev`: run the API with `tsx` watch mode
+- `npm run build`: compile TypeScript to `dist/`
+- `npm run start`: run the compiled server
+- `npm run lint`: lint with Biome
+- `npm run typecheck`: strict TypeScript check
+- `npm test`: unit and contract suite
+- `npm run test:integration`: integration suite against real Postgres and Redis
+- `npm run test:coverage`: Vitest coverage run
+- `npm run prisma:generate`: regenerate Prisma Client
+
+## Testing strategy
+
+The default `npm test` command is infrastructure-free and covers:
+
+- environment parsing
+- token issuance and verification
+- auth middleware behaviour
+- rate limiter fallback behaviour
+- health and readiness semantics
+- OpenAPI contract generation
+- refresh replay compromise logic
+
+The end-to-end suite lives in `tests/integration/` and is intentionally gated behind:
+
+```bash
+RUN_INTEGRATION_TESTS=1 npm run test:integration
+```
+
+That suite expects local PostgreSQL and Redis to be available.
+
+## Docker
+
+The repository includes:
+
+- a production-oriented `Dockerfile`
+- a `docker-compose.yml` with `app`, `postgres`, and `redis`
+
+To run the full stack with Compose:
+
+```bash
+docker compose up --build
+```
+
+## Out of scope
+
+This iteration intentionally does **not** implement:
+
+- MFA / TOTP
+- password reset
+- email verification
+- OAuth / social login
+
+The goal is a strong **core auth service**, not a full identity platform yet.
 
 ## Acknowledgements
 
-Special thanks to [Marcos Pont](https://github.com/marcospont), for his support, technical guidance, and consistent feedback throughout this project. His mentorship, engineering judgement, and practical perspective were instrumental in challenging assumptions, sharpening architectural decisions, and raising the overall technical standard of this implementation.
-
-## Folder Structure
-
-```txt
-src/
-- app.ts
-- server.ts
-- logger.ts
-- config/
-- controllers/
-- docs/
-- errors/
-- middlewares/
-- repositories/
-- routes/
-- services/
-- validators/
-
-prisma/
-- schema.prisma
-- migrations/
-
-tests/
-- auth.e2e.test.ts
-- health.e2e.test.ts
-- middleware/
-- config/
-- repositories/
-- services/
-- setup.js
-- jest.env.js
-- jest.globals.js
-- vitest.setup.mjs
-```
+Special thanks to [Marcos Pont](https://github.com/marcospont) for the technical support, thoughtful feedback, and engineering conversations that helped sharpen the quality of this project.

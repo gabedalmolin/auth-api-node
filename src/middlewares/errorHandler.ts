@@ -1,19 +1,30 @@
-const AppError = require("../errors/AppError.ts");
+import type { NextFunction, Request, Response } from "express";
+import AppError from "../errors/AppError";
 
-module.exports = (err, _req, res, _next) => {
-  if (err instanceof AppError) {
-    return res.status(err.statusCode).json({
-      error: err.message,
-      code: err.code || "APP_ERROR",
+export default function errorHandler(
+  error: unknown,
+  req: Request,
+  res: Response,
+  _next: NextFunction,
+): Response {
+  if (error instanceof AppError) {
+    return res.status(error.statusCode).json({
+      error: {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        correlationId: req.correlationId,
+      },
     });
   }
 
-  if (process.env.NODE_ENV !== "test") {
-    console.error(err);
-  }
+  req.log.error({ error }, "unhandled_error");
 
   return res.status(500).json({
-    error: "internal server error",
-    code: "INTERNAL_SERVER_ERROR",
+    error: {
+      code: "INTERNAL_SERVER_ERROR",
+      message: "internal server error",
+      correlationId: req.correlationId,
+    },
   });
-};
+}

@@ -1,39 +1,45 @@
-const express = require("express");
-const {
+import { Router } from "express";
+import {
+  createSession,
+  listSessions,
+  me,
+  refreshSession,
   register,
-  login,
-  refresh,
-  logout,
-  sessions,
-  logoutSession,
-  logoutAll,
-} = require("../controllers/authController.ts");
+  revokeAllSessions,
+  revokeCurrentSession,
+  revokeSession,
+} from "../controllers/authController";
+import authMiddleware from "../middlewares/authMiddleware";
+import { authMutationRateLimiter } from "../middlewares/rateLimiter";
+import validate from "../middlewares/validate";
+import {
+  createSessionInputSchema,
+  refreshTokenInputSchema,
+  registerInputSchema,
+  revokeCurrentSessionInputSchema,
+  sessionParamsSchema,
+} from "../contracts/authContract";
 
-const authMiddleware = require("../middlewares/authMiddleware.ts");
-const validate = require("../middlewares/validate.ts");
-const {
-  registerSchema,
-  loginSchema,
-  refreshSchema,
-  logoutSchema,
-  logoutSessionSchema,
-} = require("../validators/authSchemas.ts");
-const rateLimiter = require("../middlewares/rateLimiter.ts");
+const router = Router();
 
-const router = express.Router();
+router.post("/register", authMutationRateLimiter, validate(registerInputSchema), register);
+router.post("/sessions", authMutationRateLimiter, validate(createSessionInputSchema), createSession);
+router.post(
+  "/tokens/refresh",
+  authMutationRateLimiter,
+  validate(refreshTokenInputSchema),
+  refreshSession,
+);
+router.post(
+  "/sessions/current/revoke",
+  authMutationRateLimiter,
+  validate(revokeCurrentSessionInputSchema),
+  revokeCurrentSession,
+);
 
-router.post("/register", rateLimiter, validate(registerSchema), register);
-router.post("/login", rateLimiter, validate(loginSchema), login);
-router.post("/refresh", rateLimiter, validate(refreshSchema), refresh);
-router.post("/logout", rateLimiter, validate(logoutSchema), logout);
+router.get("/me", authMiddleware, me);
+router.get("/sessions", authMiddleware, listSessions);
+router.delete("/sessions/:sessionId", authMiddleware, validate(sessionParamsSchema, "params"), revokeSession);
+router.delete("/sessions", authMiddleware, revokeAllSessions);
 
-router.get("/profile", authMiddleware, (req, res) => {
-  req.log.info({ userId: req.userId }, "profile fetched");
-  return res.json({ message: `User ${req.userId} authenticated` });
-});
-
-router.get("/sessions", authMiddleware, sessions);
-router.post("/logout-session", authMiddleware, validate(logoutSessionSchema), logoutSession);
-router.post("/logout-all", authMiddleware, logoutAll);
-
-module.exports = router;
+export default router;

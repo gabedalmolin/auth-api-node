@@ -1,20 +1,22 @@
 {
   "compilerOptions": {
-    "target": "ES2021",
+    "target": "ES2022",
     "module": "commonjs",
     "moduleResolution": "node",
     "moduleDetection": "force",
     "rootDir": ".",
     "outDir": "dist",
+    "lib": ["ES2022"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
-    "strict": false,
-    "allowJs": true,
-    "checkJs": false,
+    "forceConsistentCasingInFileNames": true,
     "noEmit": true,
-    "types": ["node", "jest", "vitest/globals"]
+    "types": ["node", "vitest/globals"]
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "src/**/*.js", "tests/**/*.js"],
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "tests/**/*.ts", "prisma.config.ts"],
   "exclude": ["node_modules", "dist", "coverage"]
 }

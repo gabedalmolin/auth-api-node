@@ -1,21 +1,25 @@
-const baseLogger = require("../logger.ts");
+import type { NextFunction, Request, Response } from "express";
+import baseLogger from "../logger";
 
-module.exports = (req, res, next) => {
-  const logger = baseLogger.child({ correlationId: req.correlationId });
-  req.log = logger;
+export default function requestLogger(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
+  req.log = baseLogger.child({ correlationId: req.correlationId });
 
-  const start = Date.now();
+  const startedAt = Date.now();
   res.on("finish", () => {
-    logger.info(
+    req.log.info(
       {
         method: req.method,
         url: req.originalUrl,
         statusCode: res.statusCode,
-        durationMs: Date.now() - start,
+        durationMs: Date.now() - startedAt,
       },
       "http_request",
     );
   });
 
   next();
-};
+}

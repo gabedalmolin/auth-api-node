@@ -1,20 +1,36 @@
-const express = require("express");
-const swaggerUi = require("swagger-ui-express");
+import { Router } from "express";
+import swaggerUi from "swagger-ui-express";
+import { env } from "../config/env";
+import swaggerSpec from "../docs/swagger";
 
-const router = express.Router();
+const router = Router();
 
-let cachedSwaggerSpec = null;
-const getSwaggerSpec = () => {
-  if (!cachedSwaggerSpec) {
-    cachedSwaggerSpec = require("../docs/swagger.ts");
+router.get("/docs.json", (_req, res) => {
+  if (!env.DOCS_ENABLED) {
+    return res.status(404).json({ message: "docs disabled" });
   }
-  return cachedSwaggerSpec;
-};
 
-router.use("/docs", swaggerUi.serve, (req, res, next) => {
-  return swaggerUi.setup(getSwaggerSpec())(req, res, next);
+  return res.json(swaggerSpec);
 });
 
-router.get("/docs.json", (_req, res) => res.json(getSwaggerSpec()));
+router.use(
+  "/docs",
+  (_req, res, next) => {
+    if (!env.DOCS_ENABLED) {
+      return res.status(404).json({ message: "docs disabled" });
+    }
 
-module.exports = router;
+    return next();
+  },
+  ...swaggerUi.serve,
+);
+
+router.get("/docs", (req, res, next) => {
+  if (!env.DOCS_ENABLED) {
+    return res.status(404).json({ message: "docs disabled" });
+  }
+
+  return swaggerUi.setup(swaggerSpec)(req, res, next);
+});
+
+export default router;

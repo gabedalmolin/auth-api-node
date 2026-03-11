@@ -1,221 +1,364 @@
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const { randomUUID, createHash, timingSafeEqual } = require("node:crypto");
-const authConfig = require("../config/auth.ts");
-const userRepository = require("../repositories/userRepository.ts");
-const refreshTokenRepository = require("../repositories/refreshTokenRepository.ts");
-const AppError = require("../errors/AppError.ts");
+import { SessionStatus, RefreshTokenStatus } from "@prisma/client";
+import logger from "../logger";
+import AppError from "../errors/AppError";
+import passwordHasher from "./passwordHasher";
+import tokenService, { hashToken, isSameHash } from "./tokenService";
+import userRepository from "../repositories/userRepository";
+import sessionRepository from "../repositories/sessionRepository";
+import refreshTokenRepository from "../repositories/refreshTokenRepository";
 
-const HASH_ROUNDS = 8;
-const ACCESS_TOKEN_EXPIRES_IN = authConfig.jwt.expiresIn;
-const REFRESH_TOKEN_EXPIRES_IN = "7d";
-
-/**
- * Service de autenticacao
- * - Normaliza email
- * - Gera access/refresh tokens
- * - Mantem refresh tokens versionados e revogaveis no banco
- */
-const normalizeEmail = (email) => email.trim().toLowerCase();
-
-const hashToken = (token) => createHash("sha256").update(token).digest("hex");
-
-const isSameHash = (a, b) => {
-  const aBuf = Buffer.from(a, "hex");
-  const bBuf = Buffer.from(b, "hex");
-
-  if (aBuf.length !== bBuf.length) {
-    return false;
-  }
-
-  return timingSafeEqual(aBuf, bBuf);
+type RequestContext = {
+  correlationId: string;
+  ipAddress: string | null;
+  userAgent: string | null;
 };
 
-class AuthService {
-  async register({ name, email, password }) {
-    const normalizedEmail = normalizeEmail(email);
+type RegisterInput = {
+  name: string;
+  email: string;
+  password: string;
+};
 
+type CreateSessionInput = {
+  email: string;
+  password: string;
+  context: RequestContext;
+};
+
+type RefreshSessionInput = {
+  refreshToken: string;
+  context: RequestContext;
+};
+
+type RevokeCurrentSessionInput = {
+  refreshToken: string;
+  context: RequestContext;
+};
+
+const normalizeEmail = (email: string) => email.trim().toLowerCase();
+
+const serializeUser = (user: {
+  id: number;
+  name: string;
+  email: string;
+  createdAt: Date;
+}) => ({
+  id: user.id,
+  name: user.name,
+  email: user.email,
+  createdAt: user.createdAt.toISOString(),
+});
+
+const serializeSession = (session: {
+  id: string;
+  status: SessionStatus;
+  createdAt: Date;
+  lastSeenAt: Date | null;
+  userAgent: string | null;
+  ipAddress: string | null;
+}, current: boolean) => ({
+  sessionId: session.id,
+  status: session.status,
+  createdAt: session.createdAt.toISOString(),
+  lastSeenAt: session.lastSeenAt ? session.lastSeenAt.toISOString() : null,
+  userAgent: session.userAgent ?? null,
+  ipAddress: session.ipAddress ?? null,
+  current,
+});
+
+class AuthService {
+  private audit(event: string, context: RequestContext, data: Record<string, unknown>) {
+    logger.info(
+      {
+        event,
+        correlationId: context.correlationId,
+        ...data,
+      },
+      "auth_audit",
+    );
+  }
+
+  private async createTokenPair(userId: number, sessionId: string, parentTokenId?: string) {
+    const accessToken = tokenService.issueAccessToken({ userId, sessionId });
+    const refreshToken = tokenService.issueRefreshToken({ userId, sessionId });
+
+    const storedRefreshToken = await refreshTokenRepository.create({
+      sessionId,
+      tokenHash: hashToken(refreshToken.token),
+      jti: refreshToken.tokenJti,
+      expiresAt: refreshToken.expiresAt,
+      ...(parentTokenId ? { parentTokenId } : {}),
+    });
+
+    return {
+      accessToken: accessToken.token,
+      refreshToken: refreshToken.token,
+      storedRefreshToken,
+    };
+  }
+
+  private async compromiseSession(
+    sessionId: string,
+    tokenId: string,
+    context: RequestContext,
+  ): Promise<never> {
+    const compromisedAt = new Date();
+
+    await sessionRepository.markCompromised(sessionId, compromisedAt);
+    await refreshTokenRepository.markReused(tokenId, compromisedAt);
+    await refreshTokenRepository.revokeActiveBySessionId(sessionId, compromisedAt);
+
+    this.audit("auth.refresh.reuse_detected", context, { sessionId, tokenId });
+
+    throw new AppError({
+      message: "refresh token reuse detected",
+      code: "REFRESH_TOKEN_REUSED",
+      statusCode: 401,
+    });
+  }
+
+  async register({ name, email, password }: RegisterInput) {
+    const normalizedEmail = normalizeEmail(email);
     const existingUser = await userRepository.findByEmail(normalizedEmail);
+
     if (existingUser) {
-      throw new AppError("user already exists", 409, "USER_ALREADY_EXISTS");
+      throw new AppError({
+        message: "user already exists",
+        code: "USER_ALREADY_EXISTS",
+        statusCode: 409,
+      });
     }
 
-    const hashedPassword = await bcrypt.hash(password, HASH_ROUNDS);
-
+    const passwordHash = await passwordHasher.hash(password);
     const user = await userRepository.create({
       name,
       email: normalizedEmail,
-      password: hashedPassword,
+      passwordHash,
     });
 
-    const { password: _, ...rest } = user;
-    return rest;
+    return {
+      user: serializeUser(user),
+    };
   }
 
-  async login({ email, password }) {
+  async createSession({ email, password, context }: CreateSessionInput) {
     const normalizedEmail = normalizeEmail(email);
-
     const user = await userRepository.findByEmail(normalizedEmail);
+
     if (!user) {
-      throw new AppError("user not found", 401, "INVALID_CREDENTIALS");
+      this.audit("auth.login.failed", context, { email: normalizedEmail });
+      throw new AppError({
+        message: "invalid credentials",
+        code: "INVALID_CREDENTIALS",
+        statusCode: 401,
+      });
     }
 
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch) {
-      throw new AppError("invalid password", 401, "INVALID_CREDENTIALS");
+    const passwordMatches = await passwordHasher.verify(password, user.passwordHash);
+    if (!passwordMatches) {
+      this.audit("auth.login.failed", context, { email: normalizedEmail, userId: user.id });
+      throw new AppError({
+        message: "invalid credentials",
+        code: "INVALID_CREDENTIALS",
+        statusCode: 401,
+      });
     }
 
-    const token = jwt.sign({ id: user.id }, authConfig.jwt.secret, {
-      expiresIn: ACCESS_TOKEN_EXPIRES_IN,
-    });
-
-    const refreshJti = randomUUID();
-    const refreshToken = jwt.sign(
-      { id: user.id, jti: refreshJti },
-      authConfig.jwt.secret,
-      {
-        expiresIn: REFRESH_TOKEN_EXPIRES_IN,
-      },
-    );
-
-    await refreshTokenRepository.create({
-      tokenHash: hashToken(refreshToken),
-      jti: refreshJti,
+    const session = await sessionRepository.create({
       userId: user.id,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      userAgent: context.userAgent,
+      ipAddress: context.ipAddress,
     });
 
-    return { token, refreshToken };
+    const tokens = await this.createTokenPair(user.id, session.id);
+
+    this.audit("auth.login.succeeded", context, {
+      userId: user.id,
+      sessionId: session.id,
+    });
+
+    return {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      user: serializeUser(session.user),
+      session: serializeSession(session, true),
+    };
   }
 
-  async refreshToken(token) {
-    if (!token) {
-      throw new AppError("invalid refresh token", 400, "INVALID_REFRESH_TOKEN");
+  async refreshSession({ refreshToken, context }: RefreshSessionInput) {
+    const identity = tokenService.verifyRefreshToken(refreshToken);
+    const storedToken = await refreshTokenRepository.findByJti(identity.tokenJti);
+
+    if (!storedToken || storedToken.sessionId !== identity.sessionId) {
+      throw new AppError({
+        message: "invalid refresh token",
+        code: "INVALID_REFRESH_TOKEN",
+        statusCode: 401,
+      });
     }
 
-    let decoded = null;
-    try {
-      decoded = jwt.verify(token, authConfig.jwt.secret);
-    } catch {
-      throw new AppError("invalid refresh token", 401, "INVALID_REFRESH_TOKEN");
+    const session = await sessionRepository.findByIdWithUser(identity.sessionId);
+    if (!session || session.userId !== identity.userId) {
+      throw new AppError({
+        message: "invalid refresh token",
+        code: "INVALID_REFRESH_TOKEN",
+        statusCode: 401,
+      });
     }
 
-    if (!decoded.jti) {
-      throw new AppError("invalid refresh token", 401, "INVALID_REFRESH_TOKEN");
+    if (session.status === SessionStatus.COMPROMISED) {
+      throw new AppError({
+        message: "session compromised",
+        code: "SESSION_COMPROMISED",
+        statusCode: 401,
+      });
     }
 
-    const storedToken = await refreshTokenRepository.findByJti(decoded.jti);
-    if (!storedToken) {
-      throw new AppError("invalid refresh token", 401, "INVALID_REFRESH_TOKEN");
+    if (session.status !== SessionStatus.ACTIVE) {
+      throw new AppError({
+        message: "session revoked",
+        code: "SESSION_REVOKED",
+        statusCode: 401,
+      });
     }
 
-    if (storedToken.userId !== decoded.id) {
-      throw new AppError("invalid refresh token", 401, "INVALID_REFRESH_TOKEN");
-    }
-
-    if (storedToken.revoked) {
-      throw new AppError("invalid refresh token", 401, "INVALID_REFRESH_TOKEN");
+    if (storedToken.status !== RefreshTokenStatus.ACTIVE) {
+      return this.compromiseSession(session.id, storedToken.id, context);
     }
 
     if (storedToken.expiresAt <= new Date()) {
-      throw new AppError("invalid refresh token", 401, "INVALID_REFRESH_TOKEN");
+      throw new AppError({
+        message: "refresh token expired",
+        code: "REFRESH_TOKEN_EXPIRED",
+        statusCode: 401,
+      });
     }
 
-    const incomingTokenHash = hashToken(token);
-    if (!isSameHash(incomingTokenHash, storedToken.tokenHash)) {
-      throw new AppError("invalid refresh token", 401, "INVALID_REFRESH_TOKEN");
+    const incomingHash = hashToken(refreshToken);
+    if (!isSameHash(storedToken.tokenHash, incomingHash)) {
+      return this.compromiseSession(session.id, storedToken.id, context);
     }
 
-    await refreshTokenRepository.revokeByJti(decoded.jti);
+    const now = new Date();
+    const tokens = await this.createTokenPair(identity.userId, session.id, storedToken.id);
 
-    const newAccessToken = jwt.sign({ id: decoded.id }, authConfig.jwt.secret, {
-      expiresIn: ACCESS_TOKEN_EXPIRES_IN,
+    await refreshTokenRepository.markUsed(storedToken.id, now, tokens.storedRefreshToken.id);
+    const updatedSession = await sessionRepository.touchActivity({
+      sessionId: session.id,
+      lastSeenAt: now,
+      userAgent: context.userAgent,
+      ipAddress: context.ipAddress,
     });
 
-    const newRefreshJti = randomUUID();
-    const newRefreshToken = jwt.sign(
-      { id: decoded.id, jti: newRefreshJti },
-      authConfig.jwt.secret,
-      { expiresIn: REFRESH_TOKEN_EXPIRES_IN },
+    this.audit("auth.refresh.succeeded", context, {
+      userId: identity.userId,
+      sessionId: session.id,
+    });
+
+    return {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      user: serializeUser(session.user),
+      session: serializeSession(updatedSession, true),
+    };
+  }
+
+  async revokeCurrentSession({
+    refreshToken,
+    context,
+  }: RevokeCurrentSessionInput): Promise<void> {
+    const identity = tokenService.verifyRefreshToken(refreshToken);
+    const storedToken = await refreshTokenRepository.findByJti(identity.tokenJti);
+
+    if (!storedToken || storedToken.sessionId !== identity.sessionId) {
+      throw new AppError({
+        message: "invalid refresh token",
+        code: "INVALID_REFRESH_TOKEN",
+        statusCode: 401,
+      });
+    }
+
+    if (storedToken.status !== RefreshTokenStatus.ACTIVE) {
+      return this.compromiseSession(identity.sessionId, storedToken.id, context);
+    }
+
+    if (!isSameHash(storedToken.tokenHash, hashToken(refreshToken))) {
+      return this.compromiseSession(identity.sessionId, storedToken.id, context);
+    }
+
+    const now = new Date();
+    await sessionRepository.markRevoked(identity.sessionId, now, "USER_REVOKED_CURRENT_SESSION");
+    await refreshTokenRepository.revokeActiveBySessionId(identity.sessionId, now);
+
+    this.audit("auth.session.revoked_current", context, {
+      userId: identity.userId,
+      sessionId: identity.sessionId,
+    });
+  }
+
+  async getMe(userId: number, currentSessionId: string) {
+    const user = await userRepository.findById(userId);
+    const session = await sessionRepository.findById(currentSessionId);
+
+    if (!user || !session) {
+      throw new AppError({
+        message: "authenticated context not found",
+        code: "AUTH_CONTEXT_NOT_FOUND",
+        statusCode: 404,
+      });
+    }
+
+    return {
+      user: serializeUser(user),
+      session: serializeSession(session, true),
+    };
+  }
+
+  async listSessions(userId: number, currentSessionId: string) {
+    const sessions = await sessionRepository.listByUserId(userId);
+    return {
+      sessions: sessions.map((session) =>
+        serializeSession(session, session.id === currentSessionId),
+      ),
+    };
+  }
+
+  async revokeSession(userId: number, sessionId: string, context: RequestContext) {
+    const session = await sessionRepository.findByIdForUser(sessionId, userId);
+    if (!session) {
+      throw new AppError({
+        message: "session not found",
+        code: "SESSION_NOT_FOUND",
+        statusCode: 404,
+      });
+    }
+
+    const now = new Date();
+    await sessionRepository.markRevoked(sessionId, now, "USER_REVOKED_SESSION");
+    await refreshTokenRepository.revokeActiveBySessionId(sessionId, now);
+
+    this.audit("auth.session.revoked", context, {
+      userId,
+      sessionId,
+    });
+  }
+
+  async revokeAllSessions(userId: number, context: RequestContext) {
+    const now = new Date();
+    const sessions = await sessionRepository.listByUserId(userId);
+
+    await sessionRepository.revokeAllByUserId(userId, now, "USER_REVOKED_ALL_SESSIONS");
+    await Promise.all(
+      sessions.map((session) =>
+        refreshTokenRepository.revokeActiveBySessionId(session.id, now),
+      ),
     );
 
-    await refreshTokenRepository.create({
-      tokenHash: hashToken(newRefreshToken),
-      jti: newRefreshJti,
-      userId: decoded.id,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    });
-
-    return { token: newAccessToken, refreshToken: newRefreshToken };
-  }
-
-  async logout(token) {
-    if (!token) {
-      throw new AppError("invalid refresh token", 400, "INVALID_REFRESH_TOKEN");
-    }
-
-    let decoded = null;
-    try {
-      decoded = jwt.verify(token, authConfig.jwt.secret);
-    } catch {
-      throw new AppError("invalid refresh token", 401, "INVALID_REFRESH_TOKEN");
-    }
-
-    if (!decoded.jti) {
-      throw new AppError("invalid refresh token", 401, "INVALID_REFRESH_TOKEN");
-    }
-
-    const storedToken = await refreshTokenRepository.findByJti(decoded.jti);
-    if (!storedToken) {
-      throw new AppError("invalid refresh token", 401, "INVALID_REFRESH_TOKEN");
-    }
-
-    const incomingTokenHash = hashToken(token);
-    if (!isSameHash(incomingTokenHash, storedToken.tokenHash)) {
-      throw new AppError("invalid refresh token", 401, "INVALID_REFRESH_TOKEN");
-    }
-
-    await refreshTokenRepository.revokeByJti(decoded.jti);
-  }
-
-  async listSessions(userId) {
-    if (!userId) {
-      throw new AppError("unauthorized", 401, "UNAUTHORIZED");
-    }
-
-    const sessions = await refreshTokenRepository.findActiveByUserId(userId);
-    return sessions;
-  }
-
-  async logoutSession({ userId, jti }) {
-    if (!userId) {
-      throw new AppError("unauthorized", 401, "UNAUTHORIZED");
-    }
-
-    if (!jti) {
-      throw new AppError("jti is required", 400, "INVALID_PAYLOAD");
-    }
-
-    const result = await refreshTokenRepository.revokeByJtiAndUserId({
-      jti,
+    this.audit("auth.session.revoked_all", context, {
       userId,
+      affectedSessions: sessions.length,
     });
-
-    if (result.count === 0) {
-      throw new AppError("session not found", 404, "SESSION_NOT_FOUND");
-    }
-
-    return { revokedSessions: result.count };
-  }
-
-  async logoutAll(userId) {
-    if (!userId) {
-      throw new AppError("unauthorized", 401, "UNAUTHORIZED");
-    }
-
-    const result = await refreshTokenRepository.revokeAllByUserId(userId);
-    return { revokedSessions: result.count };
   }
 }
 
-module.exports = new AuthService();
+export default new AuthService();

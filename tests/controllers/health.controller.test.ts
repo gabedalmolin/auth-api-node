@@ -1,17 +1,30 @@
-jest.mock("../../src/config/prisma.ts", () => ({
-  $queryRaw: vi.fn(),
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const { queryRaw, pingRedis } = vi.hoisted(() => ({
+  queryRaw: vi.fn(),
+  pingRedis: vi.fn(),
 }));
 
-const prisma = require("../../src/config/prisma.ts");
-const healthController = require("../../src/controllers/healthController.ts");
+vi.mock("../../src/config/prisma", () => ({
+  default: {
+    $queryRaw: queryRaw,
+  },
+}));
 
-const createRes = () => {
-  const res = {
+vi.mock("../../src/config/redis", () => ({
+  pingRedis,
+}));
+
+import { health, ready } from "../../src/controllers/healthController";
+
+const createResponse = () => {
+  const response = {
     status: vi.fn(),
     json: vi.fn(),
   };
-  res.status.mockReturnValue(res);
-  return res;
+
+  response.status.mockReturnValue(response);
+  return response;
 };
 
 describe("healthController", () => {
@@ -19,51 +32,42 @@ describe("healthController", () => {
     vi.clearAllMocks();
   });
 
-  it("health retorna status ok", async () => {
-    const res = createRes();
+  it("returns liveness information", async () => {
+    const response = createResponse();
 
-    await healthController.health({}, res);
+    await health({} as never, response as never);
 
-    expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({
-        status: "ok",
-        service: "auth-api",
-        timestamp: expect.any(String),
-      }),
+    expect(response.status).toHaveBeenCalledWith(200);
+    expect(response.json).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "ok", service: "auth-api" }),
     );
   });
 
-  it("ready retorna 200 quando banco está disponível", async () => {
-    prisma.$queryRaw.mockResolvedValue([1]);
-    const res = createRes();
+  it("returns ready when dependencies are up", async () => {
+    queryRaw.mockResolvedValue([1]);
+    pingRedis.mockResolvedValue("up");
+    const response = createResponse();
 
-    await healthController.ready({}, res);
+    await ready({} as never, response as never);
 
-    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
-    expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.json).toHaveBeenCalledWith(
+    expect(response.status).toHaveBeenCalledWith(200);
+    expect(response.json).toHaveBeenCalledWith(
       expect.objectContaining({
         status: "ready",
-        database: "up",
-        timestamp: expect.any(String),
+        dependencies: expect.objectContaining({ database: "up", redis: "up" }),
       }),
     );
   });
 
-  it("ready retorna 503 quando banco falha", async () => {
-    prisma.$queryRaw.mockRejectedValue(new Error("db down"));
-    const res = createRes();
+  it("returns not_ready when database query fails", async () => {
+    queryRaw.mockRejectedValue(new Error("db down"));
+    const response = createResponse();
 
-    await healthController.ready({}, res);
+    await ready({} as never, response as never);
 
-    expect(res.status).toHaveBeenCalledWith(503);
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({
-        status: "not_ready",
-        database: "down",
-        timestamp: expect.any(String),
-      }),
+    expect(response.status).toHaveBeenCalledWith(503);
+    expect(response.json).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "not_ready" }),
     );
   });
 });

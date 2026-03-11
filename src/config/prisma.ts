@@ -1,16 +1,20 @@
-const { PrismaClient } = require("@prisma/client");
-const { PrismaPg } = require("@prisma/adapter-pg");
-const { Pool } = require("pg");
+import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
+import { env } from "./env";
 
-const path = process.env.NODE_ENV === "test" ? "tests/.env.test" : ".env";
-require("dotenv").config({ path, override: false, quiet: true });
+type GlobalPrismaState = typeof globalThis & {
+  __authApiPool?: Pool;
+  __authApiPrisma?: PrismaClient;
+};
 
-const prismaLog = process.env.NODE_ENV === "test" ? [] : ["error", "warn"];
-const globalForPrisma = globalThis;
+const globalForPrisma = globalThis as GlobalPrismaState;
+const prismaLog: ("error" | "warn")[] =
+  env.NODE_ENV === "test" ? [] : ["error", "warn"];
 
 if (!globalForPrisma.__authApiPool) {
   globalForPrisma.__authApiPool = new Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: env.DATABASE_URL,
   });
 }
 
@@ -21,12 +25,16 @@ if (!globalForPrisma.__authApiPrisma) {
   });
 }
 
-const pool = globalForPrisma.__authApiPool;
 const prisma = globalForPrisma.__authApiPrisma;
+const pool = globalForPrisma.__authApiPool;
 
 let isClosing = false;
-async function closePrismaConnection() {
-  if (isClosing) return;
+
+export async function closePrismaConnection(): Promise<void> {
+  if (isClosing) {
+    return;
+  }
+
   isClosing = true;
 
   await prisma.$disconnect();
@@ -35,5 +43,4 @@ async function closePrismaConnection() {
   isClosing = false;
 }
 
-module.exports = prisma;
-module.exports.closePrismaConnection = closePrismaConnection;
+export default prisma;

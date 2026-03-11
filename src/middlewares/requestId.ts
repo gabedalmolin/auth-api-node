@@ -1,12 +1,16 @@
-const { randomUUID } = require("node:crypto");
+import { randomUUID } from "node:crypto";
+import type { NextFunction, Request, Response } from "express";
 
-// Gera ou propaga o correlation id de cada requisição
-module.exports = (req, res, next) => {
-  const incoming = req.headers["x-correlation-id"];
+export default function requestId(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
+  const incoming = req.header("x-correlation-id");
   const correlationId = incoming || randomUUID();
 
   req.correlationId = correlationId;
   res.setHeader("x-correlation-id", correlationId);
 
   next();
-};
+}

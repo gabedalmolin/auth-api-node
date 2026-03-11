@@ -1,9 +1,9 @@
-const express = require("express");
-const { health, ready } = require("../controllers/healthController.ts");
+import { Router } from "express";
+import { health, ready } from "../controllers/healthController";
 
-const router = express.Router();
+const router = Router();
 
 router.get("/health", health);
 router.get("/ready", ready);
 
-module.exports = router;
+export default router;

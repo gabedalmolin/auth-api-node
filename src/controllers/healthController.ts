@@ -1,6 +1,8 @@
-const prisma = require("../config/prisma.ts");
+import type { Request, Response } from "express";
+import prisma from "../config/prisma";
+import { pingRedis } from "../config/redis";
 
-async function health(_req, res) {
+export async function health(_req: Request, res: Response) {
   return res.status(200).json({
     status: "ok",
     service: "auth-api",
@@ -8,23 +10,32 @@ async function health(_req, res) {
   });
 }
 
-async function ready(_req, res) {
+export async function ready(_req: Request, res: Response) {
+  const timestamp = new Date().toISOString();
+
   try {
     await prisma.$queryRaw`SELECT 1`;
-    return res.status(200).json({
-      status: "ready",
+    const redis = await pingRedis();
+    const isReady = redis === "up" || redis === "disabled";
+
+    return res.status(isReady ? 200 : 503).json({
+      status: isReady ? "ready" : "not_ready",
       service: "auth-api",
-      database: "up",
-      timestamp: new Date().toISOString(),
+      dependencies: {
+        database: "up",
+        redis,
+      },
+      timestamp,
     });
   } catch {
     return res.status(503).json({
       status: "not_ready",
       service: "auth-api",
-      database: "down",
-      timestamp: new Date().toISOString(),
+      dependencies: {
+        database: "down",
+        redis: "unknown",
+      },
+      timestamp,
     });
   }
 }
-
-module.exports = { health, ready };

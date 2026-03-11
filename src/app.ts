@@ -1,27 +1,21 @@
-const express = require("express");
-require("dotenv").config({ quiet: true });
+import express from "express";
+import authRoutes from "./routes/authRoutes";
+import docsRoutes from "./routes/docsRoutes";
+import healthRoutes from "./routes/healthRoutes";
+import requestId from "./middlewares/requestId";
+import requestLogger from "./middlewares/logger";
+import errorHandler from "./middlewares/errorHandler";
+import { env } from "./config/env";
 
 const app = express();
-app.use(express.json());
 
-const docsRoutes = require("./routes/docsRoutes.ts");
-app.use("/", docsRoutes);
-
-const requestId = require("./middlewares/requestId.ts");
-const loggerMiddleware = require("./middlewares/logger.ts");
+app.set("trust proxy", env.TRUST_PROXY);
+app.use(express.json({ limit: "1mb" }));
 app.use(requestId);
-app.use(loggerMiddleware);
-
-const authRoutes = require("./routes/authRoutes.ts");
-app.use("/auth", authRoutes);
-
-const userRoutes = require("./routes/userRoutes.ts");
-app.use("/users", userRoutes);
-
-const healthRoutes = require("./routes/healthRoutes.ts");
+app.use(requestLogger);
+app.use("/", docsRoutes);
 app.use("/", healthRoutes);
-
-const errorHandler = require("./middlewares/errorHandler.ts");
+app.use("/v1/auth", authRoutes);
 app.use(errorHandler);
 
-module.exports = app;
+export default app;
