@@ -1,13 +1,17 @@
 # Auth API
 
 ![CI](https://github.com/gabedalmolin/auth-api-node/actions/workflows/ci.yml/badge.svg)
-[![Release](https://img.shields.io/github/v/release/gabedalmolin/auth-api-node?display_name=tag)](https://github.com/gabedalmolin/auth-api-node/releases/tag/v1.0.0)
+[![Release](https://img.shields.io/github/v/release/gabedalmolin/auth-api-node?display_name=tag)](https://github.com/gabedalmolin/auth-api-node/releases/latest)
 
 Production-grade authentication API built with **Express 5**, **TypeScript**, **Prisma/PostgreSQL**, and **Redis**.
 
 This project models what a **production-grade core auth service** looks like when session lifecycle, replay resistance, operational safety, and change discipline are treated as first-class concerns.
 
 It is intentionally focused on **authentication depth**, not identity-platform breadth. The goal is to show how a serious backend service should be designed when correctness, observability, and maintainability matter more than feature count.
+
+## Proof snapshot
+
+![Auth API delivery proof overview](./docs/assets/auth-api-proof-overview.svg)
 
 ## Why this project matters
 
@@ -38,6 +42,7 @@ Many portfolio auth APIs stop at registration, login, and a basic JWT flow. This
 
 ## Operational proof
 
+- Proof snapshot: [`docs/assets/auth-api-proof-overview.svg`](./docs/assets/auth-api-proof-overview.svg)
 - Architecture decisions: [`docs/adr/`](./docs/adr)
 - Threat model: [`docs/threat-model.md`](./docs/threat-model.md)
 - Benchmark report: [`docs/benchmarks/auth-benchmark.md`](./docs/benchmarks/auth-benchmark.md)
