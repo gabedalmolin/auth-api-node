@@ -177,9 +177,6 @@ jobs:
     timeout-minutes: 30
     environment:
       name: ${{ needs.resolve-context.outputs.github_environment }}
-    outputs:
-      app_base_url: ${{ steps.validate-config.outputs.app_base_url }}
-      railway_environment: ${{ steps.validate-config.outputs.railway_environment }}
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
       RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
@@ -229,11 +226,6 @@ jobs:
             esac
           fi
 
-          {
-            echo "app_base_url=${APP_BASE_URL:-}"
-            echo "railway_environment=${RAILWAY_ENVIRONMENT}"
-          } >> "${GITHUB_OUTPUT}"
-
       - name: Checkout source
         uses: actions/checkout@v6
         with:
@@ -259,11 +251,13 @@ jobs:
       - deploy
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    environment:
+      name: ${{ needs.resolve-context.outputs.github_environment }}
     env:
       DEPLOY_REF: ${{ needs.resolve-context.outputs.ref }}
       GITHUB_ENVIRONMENT_NAME: ${{ needs.resolve-context.outputs.github_environment }}
-      RAILWAY_ENVIRONMENT: ${{ needs.deploy.outputs.railway_environment }}
-      APP_BASE_URL: ${{ needs.deploy.outputs.app_base_url }}
+      RAILWAY_ENVIRONMENT: ${{ secrets.RAILWAY_ENVIRONMENT || needs.resolve-context.outputs.railway_environment }}
+      APP_BASE_URL: ${{ needs.resolve-context.outputs.requested_base_url != '' && needs.resolve-context.outputs.requested_base_url || secrets.RAILWAY_PUBLIC_URL }}
       SMOKE_REQUIRED: ${{ needs.resolve-context.outputs.smoke_required }}
 
     steps:
