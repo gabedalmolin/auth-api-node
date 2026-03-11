@@ -33,6 +33,8 @@ At minimum, configure:
 - `JWT_AUDIENCE`
 - `DOCS_ENABLED=true`
 
+On Railway, define `DATABASE_URL` and `REDIS_URL` on the `auth-api` service itself by referencing the backing services, rather than assuming those values are shared automatically across services.
+
 `TRUST_PROXY=1` is recommended for Railway because the service sits behind a proxy.
 
 ## Repository secrets
