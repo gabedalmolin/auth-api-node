@@ -48,18 +48,18 @@ Latest recorded run:
 - Executed on March 11, 2026
 - Total iterations: `175`
 - Total HTTP requests: `650`
-- Aggregate request throughput: `24.48 req/s`
-- Aggregate iteration throughput: `6.59 iter/s`
-- Average request latency: `270.71ms`
-- `p95` request latency: `709.97ms`
-- `p99` request latency: `1023.93ms`
+- Aggregate request throughput: `25.01 req/s`
+- Aggregate iteration throughput: `6.73 iter/s`
+- Average request latency: `266.66ms`
+- `p95` request latency: `684.36ms`
+- `p99` request latency: `900.44ms`
 - Check pass rate: `100%` (`1050/1050`)
 - Threshold result: pass
 
 Scenario notes:
 
 - `session_lifecycle` completed `50` full register/login/profile loops with `5` VUs across `20s`
-- `refresh_replay` completed `125` replay-detection iterations with `5` VUs across `24.5s`
+- `refresh_replay` completed `125` replay-detection iterations with `5` VUs across `24.0s`
 
 Interpretation:
 
