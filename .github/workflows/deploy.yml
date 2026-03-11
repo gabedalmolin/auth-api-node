@@ -6,41 +6,191 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: Git ref to deploy
+        description: Git ref to verify and deploy to a non-production environment
         required: false
         default: main
+      target_environment:
+        description: GitHub Environment name for a non-production deploy, for example staging or homolog
+        required: true
+        default: staging
       railway_environment:
-        description: Railway environment name or ID
+        description: Optional Railway environment override; defaults to target_environment
         required: false
-        default: production
+        default: ""
       app_base_url:
         description: Public HTTPS base URL used for smoke validation
         required: false
         default: ""
 
 concurrency:
-  group: deploy-production
+  group: deploy-${{ github.event_name == 'release' && 'production' || inputs.target_environment || 'staging' }}
   cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
+  resolve-context:
+    name: resolve deployment context
+    runs-on: ubuntu-latest
+    outputs:
+      ref: ${{ steps.resolve.outputs.ref }}
+      github_environment: ${{ steps.resolve.outputs.github_environment }}
+      railway_environment: ${{ steps.resolve.outputs.railway_environment }}
+      requested_base_url: ${{ steps.resolve.outputs.requested_base_url }}
+      smoke_required: ${{ steps.resolve.outputs.smoke_required }}
+
+    steps:
+      - name: Resolve trigger-specific deployment context
+        id: resolve
+        shell: bash
+        env:
+          DISPATCH_REF: ${{ inputs.ref }}
+          DISPATCH_TARGET_ENVIRONMENT: ${{ inputs.target_environment }}
+          DISPATCH_RAILWAY_ENVIRONMENT: ${{ inputs.railway_environment }}
+          DISPATCH_APP_BASE_URL: ${{ inputs.app_base_url }}
+        run: |
+          set -euo pipefail
+
+          if [ "${GITHUB_EVENT_NAME}" = "release" ]; then
+            ref="${{ github.event.release.tag_name }}"
+            github_environment="production"
+            railway_environment="production"
+            smoke_required="true"
+            requested_base_url=""
+          else
+            if [ -z "${DISPATCH_TARGET_ENVIRONMENT:-}" ]; then
+              echo "::error::workflow_dispatch requires target_environment for a non-production deployment."
+              exit 1
+            fi
+
+            if [ "${DISPATCH_TARGET_ENVIRONMENT}" = "production" ]; then
+              echo "::error::Manual production deployments are intentionally blocked. Publish a GitHub release to promote to production."
+              exit 1
+            fi
+
+            ref="${DISPATCH_REF:-main}"
+            github_environment="${DISPATCH_TARGET_ENVIRONMENT}"
+            railway_environment="${DISPATCH_RAILWAY_ENVIRONMENT:-${DISPATCH_TARGET_ENVIRONMENT}}"
+            smoke_required="false"
+            requested_base_url="${DISPATCH_APP_BASE_URL:-}"
+          fi
+
+          if [ -z "${ref}" ]; then
+            echo "::error::Unable to resolve a git ref to deploy."
+            exit 1
+          fi
+
+          {
+            echo "ref=${ref}"
+            echo "github_environment=${github_environment}"
+            echo "railway_environment=${railway_environment}"
+            echo "requested_base_url=${requested_base_url}"
+            echo "smoke_required=${smoke_required}"
+          } >> "${GITHUB_OUTPUT}"
+
+  verify-promotion-candidate:
+    name: verify promotion candidate
+    needs: resolve-context
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      DATABASE_URL: postgresql://auth_user:auth_password@localhost:5432/auth_api
+      NODE_ENV: test
+      ACCESS_TOKEN_SECRET: test-access-secret-with-at-least-thirty-two-characters
+      REFRESH_TOKEN_SECRET: test-refresh-secret-with-at-least-thirty-two-characters
+      JWT_ISSUER: auth-api-test
+      JWT_AUDIENCE: auth-api-test-clients
+      REDIS_URL: redis://localhost:6379
+      RATE_LIMIT_WINDOW_MS: 60000
+      RATE_LIMIT_MAX_REQUESTS: 100
+      DOCS_ENABLED: true
+      BCRYPT_ROUNDS: 8
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: auth_user
+          POSTGRES_PASSWORD: auth_password
+          POSTGRES_DB: auth_api
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U auth_user -d auth_api"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.resolve-context.outputs.ref }}
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npm run prisma:generate
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Run typecheck
+        run: npm run typecheck
+
+      - name: Run build
+        run: npm run build
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+      - name: Apply Prisma migrations
+        run: npm run prisma:migrate:deploy
+
+      - name: Run integration tests
+        run: npm run test:integration
+
   deploy:
     name: deploy
+    needs:
+      - resolve-context
+      - verify-promotion-candidate
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment:
-      name: production
+      name: ${{ needs.resolve-context.outputs.github_environment }}
+    outputs:
+      app_base_url: ${{ steps.validate-config.outputs.app_base_url }}
+      railway_environment: ${{ steps.validate-config.outputs.railway_environment }}
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
       RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
       RAILWAY_SERVICE: ${{ secrets.RAILWAY_SERVICE }}
-      RAILWAY_ENVIRONMENT: ${{ github.event_name == 'workflow_dispatch' && inputs.railway_environment || secrets.RAILWAY_ENVIRONMENT }}
-      APP_BASE_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.app_base_url || secrets.RAILWAY_PUBLIC_URL }}
+      RAILWAY_ENVIRONMENT: ${{ secrets.RAILWAY_ENVIRONMENT || needs.resolve-context.outputs.railway_environment }}
+      APP_BASE_URL: ${{ needs.resolve-context.outputs.requested_base_url != '' && needs.resolve-context.outputs.requested_base_url || secrets.RAILWAY_PUBLIC_URL }}
+      SMOKE_REQUIRED: ${{ needs.resolve-context.outputs.smoke_required }}
 
     steps:
       - name: Validate deployment configuration
+        id: validate-config
         shell: bash
         run: |
           set -euo pipefail
@@ -53,19 +203,22 @@ jobs:
 
           for key in "${required_secrets[@]}"; do
             if [ -z "${!key:-}" ]; then
-              echo "::error::Missing required repository secret: ${key}"
+              echo "::error::Missing required environment secret: ${key}"
               exit 1
             fi
           done
 
           if [ -z "${RAILWAY_ENVIRONMENT:-}" ]; then
-            echo "RAILWAY_ENVIRONMENT=production" >> "${GITHUB_ENV}"
+            echo "::error::Missing Railway environment. Set RAILWAY_ENVIRONMENT on the selected GitHub Environment or provide a workflow_dispatch override."
+            exit 1
           fi
 
-          if [ -z "${APP_BASE_URL:-}" ]; then
-            echo "SMOKE_ENABLED=false" >> "${GITHUB_ENV}"
-            echo "::warning::RAILWAY_PUBLIC_URL is not configured. Deployment will run, but smoke validation will be skipped."
-          else
+          if [ "${SMOKE_REQUIRED}" = "true" ] && [ -z "${APP_BASE_URL:-}" ]; then
+            echo "::error::Production deployments require RAILWAY_PUBLIC_URL to be configured on the production GitHub Environment."
+            exit 1
+          fi
+
+          if [ -n "${APP_BASE_URL:-}" ]; then
             case "${APP_BASE_URL}" in
               https://*)
                 ;;
@@ -74,19 +227,22 @@ jobs:
                 exit 1
                 ;;
             esac
-            echo "SMOKE_ENABLED=true" >> "${GITHUB_ENV}"
           fi
+
+          {
+            echo "app_base_url=${APP_BASE_URL:-}"
+            echo "railway_environment=${RAILWAY_ENVIRONMENT}"
+          } >> "${GITHUB_OUTPUT}"
 
       - name: Checkout source
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.event.release.tag_name }}
+          ref: ${{ needs.resolve-context.outputs.ref }}
 
       - name: Use Node.js 20
         uses: actions/setup-node@v6
         with:
           node-version: 20
-          cache: npm
 
       - name: Install Railway CLI
         run: npm install --global @railway/cli@latest
@@ -96,25 +252,99 @@ jobs:
           CI: ""
         run: railway up --project "$RAILWAY_PROJECT_ID" --service "$RAILWAY_SERVICE" --environment "${RAILWAY_ENVIRONMENT:-production}"
 
+  validate-deployment:
+    name: validate deployment
+    needs:
+      - resolve-context
+      - deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DEPLOY_REF: ${{ needs.resolve-context.outputs.ref }}
+      GITHUB_ENVIRONMENT_NAME: ${{ needs.resolve-context.outputs.github_environment }}
+      RAILWAY_ENVIRONMENT: ${{ needs.deploy.outputs.railway_environment }}
+      APP_BASE_URL: ${{ needs.deploy.outputs.app_base_url }}
+      SMOKE_REQUIRED: ${{ needs.resolve-context.outputs.smoke_required }}
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.resolve-context.outputs.ref }}
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+
+      - name: Validate smoke configuration
+        id: smoke-config
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "${APP_BASE_URL:-}" ]; then
+            if [ "${SMOKE_REQUIRED}" = "true" ]; then
+              echo "::error::Production deployments require a public HTTPS base URL for smoke validation."
+              exit 1
+            fi
+
+            echo "smoke_enabled=false" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          case "${APP_BASE_URL}" in
+            https://*)
+              ;;
+            *)
+              echo "::error::Smoke validation requires a full HTTPS base URL, for example https://auth-api-staging.up.railway.app"
+              exit 1
+              ;;
+          esac
+
+          echo "smoke_enabled=true" >> "${GITHUB_OUTPUT}"
+
       - name: Run smoke validation
-        if: env.SMOKE_ENABLED == 'true'
+        id: smoke
+        if: steps.smoke-config.outputs.smoke_enabled == 'true'
         run: ./scripts/smoke-production.sh "$APP_BASE_URL"
 
       - name: Write deployment summary
+        if: always()
         shell: bash
+        env:
+          SMOKE_CONFIG_OUTCOME: ${{ steps.smoke-config.outcome }}
+          SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
+          SMOKE_ENABLED: ${{ steps.smoke-config.outputs.smoke_enabled }}
         run: |
           {
             echo "## Deployment summary"
             echo
             echo "- Trigger: ${GITHUB_EVENT_NAME}"
-            echo "- Ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.event.release.tag_name }}"
-            echo "- Railway environment: ${RAILWAY_ENVIRONMENT:-production}"
+            echo "- Ref: ${DEPLOY_REF}"
+            echo "- GitHub environment: ${GITHUB_ENVIRONMENT_NAME}"
+            echo "- Railway environment: ${RAILWAY_ENVIRONMENT}"
+            echo "- Verification gate: passed"
             if [ -n "${APP_BASE_URL:-}" ]; then
               echo "- Base URL: ${APP_BASE_URL}"
               echo "- Health: ${APP_BASE_URL%/}/health"
               echo "- Readiness: ${APP_BASE_URL%/}/ready"
               echo "- OpenAPI: ${APP_BASE_URL%/}/docs.json"
             else
-              echo "- Base URL: not configured"
+              echo "- Base URL: not configured for this environment"
+            fi
+
+            if [ "${SMOKE_ENABLED:-false}" = "true" ]; then
+              if [ "${SMOKE_OUTCOME:-}" = "success" ]; then
+                echo "- Smoke validation: passed"
+              else
+                echo "- Smoke validation: failed"
+              fi
+            else
+              if [ "${SMOKE_CONFIG_OUTCOME:-}" = "failure" ]; then
+                echo "- Smoke validation: blocked by invalid configuration"
+              else
+                echo "- Smoke validation: skipped (allowed only for non-production without a public URL)"
+              fi
             fi
           } >> "${GITHUB_STEP_SUMMARY}"

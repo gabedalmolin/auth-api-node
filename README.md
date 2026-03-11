@@ -202,8 +202,9 @@ The default public hosting target for this project is **Railway**.
 
 Deployment automation is implemented through [`.github/workflows/deploy.yml`](./.github/workflows/deploy.yml) and supports:
 
-- published GitHub releases
-- manual dispatch with a custom ref
+- published GitHub releases for production promotion
+- manual dispatch for intentional non-production deployments
+- exact-ref verification before any deployment
 - smoke validation for `/health`, `/ready`, and `/docs.json`
 
 Deployment setup material:
@@ -213,6 +214,14 @@ Deployment setup material:
 - [`railway.json`](./railway.json)
 
 The public demo deployment is live at [`https://auth-api-production-a97b.up.railway.app`](https://auth-api-production-a97b.up.railway.app), with public docs available at [`/docs`](https://auth-api-production-a97b.up.railway.app/docs) and [`/docs.json`](https://auth-api-production-a97b.up.railway.app/docs.json).
+
+Operational model:
+
+- CI in [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) protects `main` with `quality` and `integration`
+- production deploys happen only from published GitHub releases
+- manual `Deploy` runs are reserved for staging/homolog-style environments and reject `production`
+- the deploy workflow re-verifies the exact ref being promoted with lint, typecheck, build, coverage, and integration tests before `railway up`
+- production smoke validation is mandatory and fails clearly if `RAILWAY_PUBLIC_URL` is missing
 
 ## Observability
 
