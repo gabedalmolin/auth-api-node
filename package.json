@@ -52,7 +52,6 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.14",
-    "@eslint/js": "^9.39.2",
     "@types/bcryptjs": "^2.4.6",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
