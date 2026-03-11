@@ -18,7 +18,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "typecheck:fast": "tsgo --project tsconfig.json",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy"
   },
   "keywords": [
     "nodejs",
