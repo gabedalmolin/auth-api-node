@@ -66,6 +66,14 @@ jobs:
             echo "SMOKE_ENABLED=false" >> "${GITHUB_ENV}"
             echo "::warning::RAILWAY_PUBLIC_URL is not configured. Deployment will run, but smoke validation will be skipped."
           else
+            case "${APP_BASE_URL}" in
+              https://*)
+                ;;
+              *)
+                echo "::error::RAILWAY_PUBLIC_URL/app_base_url must be a full HTTPS base URL, for example https://auth-api-production.up.railway.app"
+                exit 1
+                ;;
+            esac
             echo "SMOKE_ENABLED=true" >> "${GITHUB_ENV}"
           fi
 
