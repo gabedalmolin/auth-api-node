@@ -13,6 +13,13 @@ It is intentionally focused on **authentication depth**, not identity-platform b
 
 ![Auth API delivery proof overview](./docs/assets/auth-api-proof-overview.svg)
 
+## Live demo
+
+- API base URL: [`https://auth-api-production-a97b.up.railway.app`](https://auth-api-production-a97b.up.railway.app)
+- Swagger UI: [`/docs`](https://auth-api-production-a97b.up.railway.app/docs)
+- OpenAPI JSON: [`/docs.json`](https://auth-api-production-a97b.up.railway.app/docs.json)
+- Health probes: [`/health`](https://auth-api-production-a97b.up.railway.app/health) and [`/ready`](https://auth-api-production-a97b.up.railway.app/ready)
+
 ## Why this project matters
 
 Many portfolio auth APIs stop at registration, login, and a basic JWT flow. This one goes further by modelling the production concerns that usually decide whether an auth service is trustworthy in practice:
@@ -205,7 +212,7 @@ Deployment setup material:
 - [`.env.production.example`](./.env.production.example)
 - [`railway.json`](./railway.json)
 
-The repository is ready for a public demo deployment, but the live URL depends on Railway project configuration plus the required GitHub repository secrets.
+The public demo deployment is live at [`https://auth-api-production-a97b.up.railway.app`](https://auth-api-production-a97b.up.railway.app), with public docs available at [`/docs`](https://auth-api-production-a97b.up.railway.app/docs) and [`/docs.json`](https://auth-api-production-a97b.up.railway.app/docs.json).
 
 ## Observability
 

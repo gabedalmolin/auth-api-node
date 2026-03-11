@@ -141,7 +141,7 @@ export const openApiSpec = {
   openapi: "3.0.3",
   info: {
     title: "Auth API",
-    version: "1.0.0",
+    version: "1.1.0",
     description:
       "Production-grade authentication API with first-class sessions, refresh-token rotation, and contract-driven documentation.",
   },
