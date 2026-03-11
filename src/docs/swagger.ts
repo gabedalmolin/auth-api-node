@@ -25,10 +25,20 @@ const getForwardedHeaderValue = (
   return value.split(",")[0]?.trim() || undefined;
 };
 
+const isLocalHost = (host: string): boolean => {
+  const normalizedHost = host.toLowerCase();
+
+  return (
+    normalizedHost.startsWith("localhost") ||
+    normalizedHost.startsWith("127.0.0.1") ||
+    normalizedHost.startsWith("[::1]")
+  );
+};
+
 export const resolveSwaggerBaseUrl = (
   request: SwaggerRequestLike,
 ): string => {
-  const protocol =
+  const requestedProtocol =
     getForwardedHeaderValue(request, "x-forwarded-proto") ?? request.protocol;
   const host =
     getForwardedHeaderValue(request, "x-forwarded-host") ?? request.get("host");
@@ -36,6 +46,14 @@ export const resolveSwaggerBaseUrl = (
   if (!host) {
     return LOCAL_SWAGGER_SERVER.url;
   }
+
+  // Public proxy platforms can forward traffic to the container over plain HTTP
+  // even when the external URL is HTTPS. Prefer HTTPS for non-local hosts so
+  // Swagger "Try it out" targets the public origin instead of an internal hop.
+  const protocol =
+    requestedProtocol === "http" && !isLocalHost(host)
+      ? "https"
+      : requestedProtocol;
 
   return `${protocol}://${host}`;
 };

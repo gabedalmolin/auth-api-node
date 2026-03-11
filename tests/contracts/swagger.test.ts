@@ -66,6 +66,19 @@ describe("swagger spec", () => {
     expect(baseUrl).toBe("https://auth-api-production-a97b.up.railway.app");
   });
 
+  it("prefers https for non-local public hosts when the proxy reports http", () => {
+    const baseUrl = resolveSwaggerBaseUrl({
+      protocol: "http",
+      get(header: string) {
+        return header === "host"
+          ? "auth-api-production-a97b.up.railway.app"
+          : undefined;
+      },
+    });
+
+    expect(baseUrl).toBe("https://auth-api-production-a97b.up.railway.app");
+  });
+
   it("falls back to the local server when the host header is unavailable", () => {
     const baseUrl = resolveSwaggerBaseUrl({
       protocol: "https",
