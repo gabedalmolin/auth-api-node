@@ -3,52 +3,64 @@
   <desc id="desc">Overview card summarising session security, operational telemetry, benchmark baseline, and CI discipline for the Auth API project.</desc>
   <rect width="1200" height="760" fill="#F5F1E8"/>
   <rect x="32" y="32" width="1136" height="696" rx="28" fill="#FFFDF8" stroke="#D8D0C2" stroke-width="2"/>
-  <path d="M80 150H1120" stroke="#E8E1D5" stroke-width="2"/>
-  <path d="M80 370H1120" stroke="#E8E1D5" stroke-width="2"/>
-  <path d="M600 182V650" stroke="#E8E1D5" stroke-width="2"/>
+  <path d="M80 174H1120" stroke="#E8E1D5" stroke-width="2"/>
+  <path d="M80 406H1120" stroke="#E8E1D5" stroke-width="2"/>
+  <path d="M600 186V708" stroke="#E8E1D5" stroke-width="2"/>
 
   <text x="80" y="98" fill="#19323C" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="700">Auth API Delivery Proof</text>
   <text fill="#4D5B63" font-family="Arial, Helvetica, sans-serif" font-size="20">
-    <tspan x="80" y="126">Production-grade authentication depth with replay resistance,</tspan>
-    <tspan x="80" y="154">operational telemetry, and measurable validation.</tspan>
+    <tspan x="80" y="132">Production-grade authentication depth with replay resistance,</tspan>
+    <tspan x="80" y="160">operational telemetry, and measurable validation.</tspan>
   </text>
 
-  <rect x="80" y="190" width="488" height="144" rx="22" fill="#19323C"/>
-  <text x="112" y="230" fill="#FFFDF8" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700">Session Security</text>
-  <text fill="#D7E3E8" font-family="Arial, Helvetica, sans-serif" font-size="20">
-    <tspan x="112" y="268">Session-backed auth lifecycle</tspan>
-    <tspan x="112" y="296">Refresh-token rotation with replay detection</tspan>
-    <tspan x="112" y="324">Server-side session revocation and compromise handling</tspan>
+  <rect x="80" y="196" width="488" height="184" rx="22" fill="#19323C"/>
+  <text x="112" y="236" fill="#FFFDF8" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700">Session Security</text>
+  <text fill="#D7E3E8" font-family="Arial, Helvetica, sans-serif" font-size="18">
+    <tspan x="112" y="274">Session-backed auth lifecycle</tspan>
+    <tspan x="112" y="294">Refresh-token rotation</tspan>
+    <tspan x="112" y="314">with replay detection</tspan>
+    <tspan x="112" y="334">Server revocation</tspan>
+    <tspan x="112" y="354">and compromise handling</tspan>
   </text>
 
-  <rect x="632" y="190" width="488" height="144" rx="22" fill="#D95D39"/>
-  <text x="664" y="230" fill="#FFF8F2" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700">Operational Telemetry</text>
-  <text fill="#FFF1E8" font-family="Arial, Helvetica, sans-serif" font-size="20">
-    <tspan x="664" y="268">Prometheus-compatible `/metrics` endpoint</tspan>
-    <tspan x="664" y="296">Local Grafana dashboard and observability stack</tspan>
-    <tspan x="664" y="324">Health, readiness, replay, and rate-limit signals</tspan>
+  <rect x="632" y="196" width="488" height="184" rx="22" fill="#D95D39"/>
+  <text x="664" y="236" fill="#FFF8F2" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700">Operational Telemetry</text>
+  <text fill="#FFF1E8" font-family="Arial, Helvetica, sans-serif" font-size="18">
+    <tspan x="664" y="268">Prometheus-compatible</tspan>
+    <tspan x="664" y="288">`/metrics` endpoint</tspan>
+    <tspan x="664" y="308">Local Grafana dashboard</tspan>
+    <tspan x="664" y="328">and observability stack</tspan>
+    <tspan x="664" y="348">Health, readiness, replay,</tspan>
+    <tspan x="664" y="368">and rate-limit signals</tspan>
   </text>
 
-  <rect x="80" y="404" width="488" height="210" rx="22" fill="#F2C14E"/>
-  <text x="112" y="446" fill="#3B2B00" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700">Benchmark Baseline</text>
-  <text x="112" y="492" fill="#3B2B00" font-family="Arial, Helvetica, sans-serif" font-size="44" font-weight="700">25.01 req/s</text>
-  <text fill="#5B460C" font-family="Arial, Helvetica, sans-serif" font-size="20">
-    <tspan x="112" y="528">Aggregate throughput across auth lifecycle scenarios</tspan>
+  <rect x="80" y="432" width="488" height="276" rx="22" fill="#F2C14E"/>
+  <text x="112" y="472" fill="#3B2B00" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700">Benchmark Baseline</text>
+  <text x="112" y="520" fill="#3B2B00" font-family="Arial, Helvetica, sans-serif" font-size="44" font-weight="700">25.01 req/s</text>
+  <text fill="#5B460C" font-family="Arial, Helvetica, sans-serif" font-size="18">
+    <tspan x="112" y="558">Aggregate throughput across</tspan>
+    <tspan x="112" y="580">auth lifecycle scenarios</tspan>
   </text>
-  <text x="112" y="568" fill="#3B2B00" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700">p95 684.36ms   p99 900.44ms</text>
-  <text fill="#5B460C" font-family="Arial, Helvetica, sans-serif" font-size="20">
-    <tspan x="112" y="602">100 percent check pass rate with replay rejection</tspan>
+  <text x="112" y="616" fill="#3B2B00" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700">p95 684.36ms   p99 900.44ms</text>
+  <text fill="#5B460C" font-family="Arial, Helvetica, sans-serif" font-size="18">
+    <tspan x="112" y="652">100 percent check pass rate</tspan>
+    <tspan x="112" y="674">with replay rejection</tspan>
   </text>
 
-  <rect x="632" y="404" width="488" height="210" rx="22" fill="#2A6F97"/>
-  <text x="664" y="446" fill="#F4FBFF" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700">Delivery Discipline</text>
-  <text fill="#F4FBFF" font-family="Arial, Helvetica, sans-serif" font-size="20">
-    <tspan x="664" y="486">Contract-driven API docs and typed configuration</tspan>
-    <tspan x="664" y="514">Quality, integration, CodeQL, and dependency review</tspan>
-    <tspan x="664" y="542">Architecture decision records and repository threat model</tspan>
+  <rect x="632" y="432" width="488" height="276" rx="22" fill="#2A6F97"/>
+  <text x="664" y="472" fill="#F4FBFF" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700">Delivery Discipline</text>
+  <text fill="#F4FBFF" font-family="Arial, Helvetica, sans-serif" font-size="16">
+    <tspan x="664" y="502">Contract-driven API docs</tspan>
+    <tspan x="664" y="522">Typed configuration</tspan>
+    <tspan x="664" y="542">Quality and integration</tspan>
+    <tspan x="664" y="562">CodeQL and dependency</tspan>
+    <tspan x="664" y="582">review checks</tspan>
+    <tspan x="664" y="602">ADRs and threat model</tspan>
   </text>
-  <text fill="#D5EEF8" font-family="Arial, Helvetica, sans-serif" font-size="18">
-    <tspan x="664" y="582">Versioned proof assets: benchmark summary,</tspan>
-    <tspan x="664" y="608">observability guide, dashboard JSON, and ADRs</tspan>
+  <text fill="#D5EEF8" font-family="Arial, Helvetica, sans-serif" font-size="16">
+    <tspan x="664" y="632">Versioned assets:</tspan>
+    <tspan x="664" y="652">benchmark summary</tspan>
+    <tspan x="664" y="672">observability guide</tspan>
+    <tspan x="664" y="692">dashboard JSON and ADRs</tspan>
   </text>
 </svg>
