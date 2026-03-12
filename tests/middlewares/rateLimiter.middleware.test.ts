@@ -42,7 +42,10 @@ describe("rateLimiter", () => {
   });
 
   it("blocks after exceeding the memory fallback limit", async () => {
-    const { createRateLimiter } = await loadRateLimiter({ redisEnabled: false });
+    const { createRateLimiter, __rateLimiterInternals } = await loadRateLimiter({
+      redisEnabled: false,
+    });
+    __rateLimiterInternals.clearMemoryBuckets();
     const limiter = createRateLimiter({
       bucket: "test",
       maxRequests: 1,
@@ -63,10 +66,11 @@ describe("rateLimiter", () => {
   });
 
   it("falls back to memory when redis errors", async () => {
-    const { createRateLimiter } = await loadRateLimiter({
+    const { createRateLimiter, __rateLimiterInternals } = await loadRateLimiter({
       redisEnabled: true,
       incr: () => Promise.reject(new Error("redis down")),
     });
+    __rateLimiterInternals.clearMemoryBuckets();
     const limiter = createRateLimiter({
       bucket: "test",
       maxRequests: 2,
@@ -88,7 +92,7 @@ describe("rateLimiter", () => {
   });
 
   it("records a rate-limit hit when redis-backed limiting blocks", async () => {
-    const { createRateLimiter } = await loadRateLimiter({
+    const { createRateLimiter, __rateLimiterInternals } = await loadRateLimiter({
       redisEnabled: true,
       incr: (() => {
         let count = 1;
@@ -96,6 +100,7 @@ describe("rateLimiter", () => {
         return () => Promise.resolve(count++);
       })(),
     });
+    __rateLimiterInternals.clearMemoryBuckets();
     const limiter = createRateLimiter({
       bucket: "auth",
       maxRequests: 1,
@@ -114,5 +119,25 @@ describe("rateLimiter", () => {
 
     expect(blocked.mock.calls[0]?.[0]?.code).toBe("TOO_MANY_REQUESTS");
     expect(recordRateLimitHit).toHaveBeenCalledWith("auth", "redis");
+  });
+
+  it("caps the in-memory fallback store under high-cardinality traffic", async () => {
+    const { createRateLimiter, __rateLimiterInternals } = await loadRateLimiter({
+      redisEnabled: false,
+    });
+    __rateLimiterInternals.clearMemoryBuckets();
+    const limiter = createRateLimiter({
+      bucket: "test",
+      maxRequests: 10,
+      windowMs: 60_000,
+      memoryMaxKeys: 2,
+      resolveKey: (req) => req.ip || "global",
+    });
+
+    await limiter({ ip: "10.10.0.10", log: { warn: vi.fn() } } as never, {} as never, vi.fn());
+    await limiter({ ip: "10.10.0.11", log: { warn: vi.fn() } } as never, {} as never, vi.fn());
+    await limiter({ ip: "10.10.0.12", log: { warn: vi.fn() } } as never, {} as never, vi.fn());
+
+    expect(__rateLimiterInternals.getMemoryBucketCount()).toBe(2);
   });
 });

@@ -174,6 +174,7 @@ LOG_LEVEL="info"
 TRUST_PROXY=0
 DOCS_ENABLED=true
 METRICS_ENABLED=false
+METRICS_AUTH_TOKEN=""
 BCRYPT_ROUNDS=10
 ```
 
@@ -206,6 +207,7 @@ Deployment automation is implemented through [`.github/workflows/deploy.yml`](./
 - manual dispatch for intentional non-production deployments
 - exact-ref verification before any deployment
 - smoke validation for `/health`, `/ready`, and `/docs.json`
+- a pinned Railway CLI version for deterministic release promotion
 
 Deployment setup material:
 
@@ -228,6 +230,8 @@ Operational model:
 Enable metrics locally with `METRICS_ENABLED=true` and expose:
 
 - `GET /metrics`
+
+If metrics are enabled on any non-local environment, prefer setting `METRICS_AUTH_TOKEN` or keeping the route private at the network layer instead of exposing raw Prometheus output publicly.
 
 Local observability assets:
 
