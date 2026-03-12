@@ -1,6 +1,6 @@
 {
   "name": "auth-api",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "description": "Production-grade authentication API with session governance, refresh rotation, Prisma/PostgreSQL persistence, Redis rate limiting, and contract-driven documentation.",
   "main": "dist/src/server.js",
   "type": "commonjs",
