@@ -3,6 +3,7 @@ import { SessionStatus } from "@prisma/client";
 import AppError from "../errors/AppError";
 import tokenService from "../services/tokenService";
 import sessionRepository from "../repositories/sessionRepository";
+import { extractBearerToken } from "../utils/bearerToken";
 
 export default async function authMiddleware(
   req: Request,
@@ -21,8 +22,7 @@ export default async function authMiddleware(
     );
   }
 
-  const match = authorization.match(/^Bearer\s+(.+)$/i);
-  const token = match?.[1];
+  const token = extractBearerToken(authorization);
   if (!token) {
     return next(
       new AppError({
