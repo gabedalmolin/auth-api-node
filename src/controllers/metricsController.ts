@@ -5,20 +5,17 @@ import {
   renderMetrics,
 } from "../metrics/authMetrics";
 import { env } from "../config/env";
-
-const getBearerToken = (request: Request): string | null => {
-  const authorization = request.header("authorization");
-  const match = authorization?.match(/^Bearer\s+(.+)$/i);
-
-  return match?.[1]?.trim() || null;
-};
+import { extractBearerToken } from "../utils/bearerToken";
 
 export async function metrics(req: Request, res: Response) {
   if (!metricsEnabled) {
     return res.status(404).json({ message: "metrics disabled" });
   }
 
-  if (env.METRICS_AUTH_TOKEN && getBearerToken(req) !== env.METRICS_AUTH_TOKEN) {
+  if (
+    env.METRICS_AUTH_TOKEN &&
+    extractBearerToken(req.header("authorization")) !== env.METRICS_AUTH_TOKEN
+  ) {
     return res.status(401).json({
       error: {
         code: "METRICS_AUTHORIZATION_REQUIRED",
