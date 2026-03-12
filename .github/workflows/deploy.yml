@@ -29,6 +29,9 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  RAILWAY_CLI_VERSION: 4.31.0
+
 jobs:
   resolve-context:
     name: resolve deployment context
@@ -237,7 +240,7 @@ jobs:
           node-version: 20
 
       - name: Install Railway CLI
-        run: npm install --global @railway/cli@latest
+        run: npm install --global @railway/cli@${RAILWAY_CLI_VERSION}
 
       - name: Deploy to Railway
         env:

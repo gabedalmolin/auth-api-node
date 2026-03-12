@@ -52,6 +52,7 @@ At minimum, configure:
 On Railway, define `DATABASE_URL` and `REDIS_URL` on the `auth-api` service itself by referencing the backing services, rather than assuming those values are shared automatically across services.
 
 `TRUST_PROXY=1` is recommended for Railway because the service sits behind a proxy.
+`METRICS_ENABLED=false` is the safer production default unless the metrics route stays private or is protected with `METRICS_AUTH_TOKEN`.
 
 ## GitHub Environments and secrets
 
@@ -115,6 +116,8 @@ The workflow now has four explicit phases:
 
 The workflow clears the default GitHub Actions `CI=true` value for the deploy step so Railway waits for the deployment result instead of switching to build-only CI mode.
 
+The Railway CLI version is pinned in the workflow on purpose. Update that version deliberately, in reviewable code, rather than pulling `latest` during a production promotion.
+
 Concurrency is grouped by environment, not by a single hardcoded production bucket, so staging and production deploy queues remain isolated.
 
 ## Railway config as code
@@ -157,6 +160,6 @@ Recommended manual configuration in GitHub:
 
 Branch protection should continue to require the `quality` and `integration` jobs from `.github/workflows/ci.yml` for `main`.
 
-## Current limitation
+## Current production demo
 
-The repository automation is ready for deployment, but an actual public demo URL still depends on the Railway project existing and the required GitHub Environment secrets being configured correctly.
+The public demo is live at `https://auth-api-production-a97b.up.railway.app`.

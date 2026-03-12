@@ -12,12 +12,23 @@ This repository exposes a minimal Prometheus-compatible metrics surface focused 
 
 The metrics endpoint is disabled by default and must be enabled explicitly with `METRICS_ENABLED=true`.
 
+For non-local environments, prefer one of these patterns:
+
+- keep `/metrics` on a private network only
+- set `METRICS_AUTH_TOKEN` and require a bearer token from the scraper
+
 ## Run the service with metrics enabled
 
 Start the application locally with metrics exposed on `/metrics`:
 
 ```bash
 METRICS_ENABLED=true npm run dev
+```
+
+If you want to exercise the authenticated path locally, provide a token:
+
+```bash
+METRICS_ENABLED=true METRICS_AUTH_TOKEN=local-observability-token npm run dev
 ```
 
 If you are using the full local stack, ensure PostgreSQL and Redis are running first:
